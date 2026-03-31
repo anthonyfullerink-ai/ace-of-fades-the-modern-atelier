@@ -96,7 +96,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
     
     try {
         const fallbackQ = query(bookingsCollection, where("userId", "==", userId));
-        const fallbackSnapshot = await withTimeout(getDocs(fallbackQ), 5000);
+        const fallbackSnapshot = await withTimeout(getDocs(fallbackQ), 15000);
         const docs = fallbackSnapshot.docs.map(d => ({
             id: d.id,
             ...d.data()
@@ -140,7 +140,7 @@ export const getAllBookings = async (): Promise<Booking[]> => {
     console.error("Error getting all bookings:", error);
     // Fallback if index isn't ready or other error
     try {
-      const querySnapshot = await withTimeout(getDocs(bookingsCollection), 5000);
+      const querySnapshot = await withTimeout(getDocs(bookingsCollection), 15000);
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -156,7 +156,7 @@ export const getBookingsByDate = async (date: string): Promise<Booking[]> => {
   try {
     // Filter by date on the server for performance
     const q = query(bookingsCollection, where("date", "==", date));
-    const querySnapshot = await withTimeout(getDocs(q), 5000);
+    const querySnapshot = await withTimeout(getDocs(q), 15000);
     
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
@@ -211,7 +211,7 @@ export const getBlockedSlots = async (date?: string): Promise<BlockedSlot[]> => 
     if (date) {
       q = query(blockedSlotsCollection, where("date", "==", date));
     }
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await withTimeout(getDocs(q), 15000);
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
