@@ -3,9 +3,10 @@ rules_version='2'
 service cloud.firestore {
   match /databases/{database}/documents {
       match /bookings/{bookingId} {
-        // Allow users to read/write their own bookings
-        // Allow admin (anthony@offgridmediagroup.com) to read/write all bookings
-        allow read, update, delete: if request.auth != null && (
+        // Allow users to read all bookings to check availability
+        // Note: Future enhancement could limit individual document fields
+        allow read: if request.auth != null;
+        allow update, delete: if request.auth != null && (
           request.auth.uid == resource.data.userId || 
           request.auth.token.email == 'anthony@offgridmediagroup.com'
         );

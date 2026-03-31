@@ -138,11 +138,34 @@ export const getAllBookings = async (): Promise<Booking[]> => {
   } catch (error) {
     console.error("Error getting all bookings:", error);
     // Fallback if index isn't ready or other error
-    const querySnapshot = await withTimeout(getDocs(bookingsCollection));
+    try {
+      const querySnapshot = await withTimeout(getDocs(bookingsCollection), 5000);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Booking)).sort((a,b) => b.createdAt - a.createdAt);
+    } catch (e) {
+      console.error("Critical error in getAllBookings fallback:", e);
+      return [];
+    }
+  }
+};
+
+export const getBookingsByDate = async (date: string): Promise<Booking[]> => {
+  try {
+    // Filter by date on the server for performance
+    const q = query(bookingsCollection, where("date", "==", date));
+    const querySnapshot = await withTimeout(getDocs(q), 5000);
+    
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    } as Booking)).sort((a,b) => b.createdAt - a.createdAt);
+    } as Booking));
+  } catch (error) {
+    console.error("Error getting bookings by date:", error);
+    // If the server query fails, we return an empty array to allow the UI to handle it
+    // rather than potentially failing everything.
+    return [];
   }
 };
 

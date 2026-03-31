@@ -6,7 +6,7 @@ import { SERVICES } from '../data/services';
 import { BARBERS, Barber } from '../data/barbers';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../config/firebase';
-import { getBlockedSlots, getAllBookings, createBooking, getBlockedRanges, BlockedRange, getClientByUid } from '../services/api';
+import { getBlockedSlots, getBookingsByDate, createBooking, getBlockedRanges, BlockedRange, getClientByUid } from '../services/api';
 import { sendBookingConfirmation } from '../services/email';
 import toast from 'react-hot-toast';
 
@@ -102,14 +102,10 @@ export default function Booking() {
               return;
             }
 
-            const [allBookings, blockedSlots] = await Promise.all([
-                getAllBookings(),
+            const [dayBookings, blockedSlots] = await Promise.all([
+                getBookingsByDate(selectedDate),
                 getBlockedSlots(selectedDate)
             ]);
-
-            const dayBookings = allBookings.filter(b => 
-                b.date === selectedDate && b.status !== 'Cancelled'
-            );
 
             const allPossibleSlots = generateTimeSlots();
             const filtered = allPossibleSlots.filter(slot => {
