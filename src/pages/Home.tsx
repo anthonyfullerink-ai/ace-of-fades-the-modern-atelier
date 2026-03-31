@@ -1,0 +1,254 @@
+import { motion } from 'motion/react';
+import { Calendar, Scissors, MapPin, Verified, Star, Phone } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const reviews = [
+  {
+    id: 1,
+    name: 'Barry S.',
+    date: 'Nov 2024',
+    rating: 5,
+    comment: 'Great state of the art facility. Mo is excellent at his craft — highly recommend setting an appointment. Been going to Mo for years and you won\'t be disappointed!',
+  },
+  {
+    id: 2,
+    name: 'Dylan A.',
+    date: 'Apr 2022',
+    rating: 5,
+    comment: 'Yo, if you ever need a great fade, shape up, and a good vibe, you gotta go to Ace of Fades. Mo is professional, friendly, and the best in the business.',
+  },
+  {
+    id: 3,
+    name: 'Kevin D.',
+    date: 'Apr 2022',
+    rating: 5,
+    comment: 'Never had a more professional & easy-going haircut in my life. Superb business. True master at his craft.',
+  },
+];
+
+function StarRating({ count }: { count: number }) {
+  return (
+    <div className="flex gap-1">
+      {Array.from({ length: count }).map((_, i) => (
+        <Star key={i} size={14} className="text-primary fill-primary" />
+      ))}
+    </div>
+  );
+}
+
+import { SERVICES } from '../data/services';
+
+export default function Home() {
+  const featuredServices = SERVICES.slice(0, 4);
+
+  return (
+    <main className="pt-16">
+      {/* Hero Section */}
+      <section id="hero" className="relative h-[80vh] flex items-end px-6 pb-20 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img
+            className="w-full h-full object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700 scale-105"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3i43ZyUBuwx8TljxdRLwVXU049nO1PQGApC6vEoBHXtstS3NL1Stdl9UcfuOy2IKKBuRMcDiTPBQsT2oNTXIkoS3xPnVPAM45WRzw4T64kyYo99UeTcSORGxvAyMTBKVcqrpYDUJcMBhFlxRHn4odgIQiViUeMMwBEzTfLAJET5F4X1b-vLkAIPoZD2Pxxgh2m7Lgzu84EC6y_vy5VfKQxgEnavCBa5_jW9kY7ikjcmur_wc0u72QgMomtO3a5K2mwXj3W0UY5Bs"
+            alt="Ace of Fades Barbershop Interior"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+        </div>
+        <div className="relative z-10 w-full max-w-4xl mx-auto">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="font-headline text-primary tracking-[0.3em] text-xs font-bold mb-4 uppercase"
+          >
+            The Modern Atelier · Est. 2022 · Eatontown, NJ
+          </motion.p>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="font-headline text-6xl md:text-8xl font-bold leading-[0.9] tracking-tighter text-on-surface mb-8 uppercase"
+          >
+            ACE<br/>OF<br/>FADES
+          </motion.h2>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Link to="/book?serviceId=01" className="gold-gradient inline-block px-12 py-5 text-on-primary font-headline font-bold tracking-widest uppercase active:scale-[0.98] transition-transform">
+              Book Appointment
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Services Preview */}
+      <section id="services-preview" className="px-6 py-24 bg-surface-container-lowest">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-end mb-16">
+            <div>
+              <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">01</span>
+              <h3 className="font-headline text-4xl font-bold tracking-tight uppercase">Services</h3>
+            </div>
+            <Link to="/services" className="font-body text-primary text-xs tracking-widest uppercase border-b border-primary pb-1 hover:text-primary-fixed transition-colors">
+              View Full Menu
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-6">
+            {featuredServices.map((service) => (
+              <div key={service.id} className="group relative bg-surface-container p-8 flex justify-between items-center transition-colors hover:bg-surface-container-high border-l-2 border-transparent hover:border-primary">
+                <span className="absolute -left-2 text-7xl font-headline font-black text-outline-variant/10 pointer-events-none group-hover:opacity-20 transition-opacity">{service.id}</span>
+                <div className="relative z-10">
+                  <h4 className="font-headline text-xl font-bold tracking-tight uppercase text-on-surface">{service.name}</h4>
+                  <p className="text-on-surface-variant text-sm mt-1">{service.desc}</p>
+                </div>
+                <span className="font-headline text-primary font-bold text-2xl">{service.price}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section id="about" className="bg-surface py-24 px-6 overflow-hidden">
+        <div className="max-w-4xl mx-auto relative">
+          <div className="absolute -top-10 -right-10 opacity-5 pointer-events-none">
+            <span className="font-headline text-[180px] font-black uppercase text-on-surface">MO</span>
+          </div>
+          <div className="mb-16">
+            <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">02</span>
+            <h3 className="font-headline text-4xl font-bold tracking-tight uppercase">The Artisan</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="aspect-[4/5] bg-surface-container-low overflow-hidden">
+              <img
+                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDl2JDm-1yyljKFPVgcB57Mu3kWfM5HY3chvC0ob5XS8wV3Ij6IjPsL2zNE8O0HIxA4vrl3pXEQfx_mToBppxmdMIm0CPUsM-W0Rn04QOK9iLlmB8svpyEOI6kT1ejELaGcWGVmRu3ddCyRhQblCI79-bTCpPR9JTpBCKbueIOgcmnaXKsFwbYl1HEiHcrApjEQs1xukkrt_OTiRDlt7Tp26HoG1VR3D7eSpp6L-vPI2OPGVITBlub3IDEXf2BQNypO4eBHsxJ7xYE"
+                alt="Mo the Barber"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="space-y-8">
+              <h4 className="font-headline text-5xl font-bold tracking-tighter uppercase leading-none">Mo the Barber</h4>
+              <p className="text-on-surface-variant text-lg leading-relaxed font-light">
+                Cutting hair since 2009, Mo brings over 15 years of technical mastery to every appointment. Specializing in fades, clipper over comb, hot towel shaves, hair designs, children's haircuts, shear cuts, and beard work — every detail is deliberate.
+              </p>
+              <p className="text-on-surface-variant text-sm leading-relaxed italic border-l-2 border-primary pl-4">
+                "I look forward to seeing you!"
+                <span className="block mt-1 not-italic font-headline text-primary text-xs tracking-widest uppercase">— Mesut "MO" Ozelmas</span>
+              </p>
+              <div className="flex items-center gap-4">
+                <Verified className="text-primary" size={24} />
+                <span className="font-headline text-sm tracking-widest uppercase font-bold text-on-surface">Master Craftsman · Est. 2022</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Phone className="text-primary" size={18} />
+                <a href="tel:7325972374" className="font-headline text-sm tracking-widest uppercase text-on-surface-variant hover:text-primary transition-colors">
+                  732-597-2374
+                </a>
+              </div>
+              <div className="pt-4 flex flex-wrap gap-x-6 gap-y-3">
+                {['WiFi', 'Beer & Wine', 'TV', 'Kid Friendly'].map((amenity) => (
+                  <span key={amenity} className="text-[10px] tracking-widest uppercase text-outline flex items-center gap-2">
+                    <span className="w-1 h-1 bg-primary rounded-full"></span>
+                    {amenity}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Reviews Section */}
+      <section id="reviews" className="bg-surface-container-lowest py-24 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-end mb-16">
+            <div>
+              <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">03</span>
+              <h3 className="font-headline text-4xl font-bold tracking-tight uppercase">Client Voices</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <StarRating count={5} />
+              <span className="font-headline text-xs tracking-widest text-on-surface-variant uppercase">All 5-Star</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {reviews.map((review, i) => (
+              <motion.div
+                key={review.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-surface-container p-8 border-l-2 border-primary/30 hover:border-primary transition-colors duration-300"
+              >
+                <StarRating count={review.rating} />
+                <p className="text-on-surface-variant text-sm leading-relaxed mt-4 mb-6 italic">
+                  "{review.comment}"
+                </p>
+                <div className="flex justify-between items-center border-t border-outline-variant/20 pt-4">
+                  <span className="font-headline font-bold text-sm uppercase text-on-surface">{review.name}</span>
+                  <span className="text-xs text-outline tracking-widest uppercase">{review.date}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Location & Hours */}
+      <section id="location" className="bg-surface-container-low py-24 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-16">
+            <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">04</span>
+            <h3 className="font-headline text-4xl font-bold tracking-tight uppercase">Atelier Access</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="aspect-video bg-surface overflow-hidden relative group">
+              <img
+                className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdPmnGIuugYPpCElSeHeqAFkF-n8gzVhUlk8vGn_DTvUsiiuHq2hiLKGJb53QG4kTE1dB8vi0c3okefwIeva31QL27dsd89IzVf_-UloM8M6ARLhTnkgEzuKmwiPctEhNVTr1-r9CsKYEQ50IcOztuZBV7j8L7jjXbLFXjen1tVXdaXuPXdWe8UH8aIMyFh4adu0Gcm4oaLwMdRxaYxENpzxze6iPlyMO29QxaMbCsJxcuXZXjxjabN_gviAfSHcsB6Y2r2PQF5U4"
+                alt="Map – Eatontown NJ"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-12 h-12 bg-primary flex items-center justify-center animate-pulse">
+                  <MapPin className="text-on-primary" size={24} />
+                </div>
+              </div>
+              <div className="absolute bottom-4 left-4 glass-panel px-6 py-3 border-l-4 border-primary">
+                <p className="font-headline text-xs tracking-widest text-primary font-bold uppercase">Eatontown, NJ</p>
+                <p className="text-sm text-on-surface mt-1 uppercase">315 Rt 35, Suite 112</p>
+                <p className="text-xs text-on-surface-variant mt-0.5">Inside Haven Salon Studios</p>
+              </div>
+            </div>
+            <div className="bg-surface-container p-10 space-y-6">
+              <h5 className="font-headline text-sm tracking-[0.3em] uppercase text-outline mb-8">Business Hours</h5>
+              {[
+                { day: 'Mon / Wed / Fri', hours: '10:00 — 18:00' },
+                { day: 'Thursday', hours: '09:30 — 18:00' },
+                { day: 'Saturday', hours: '09:00 — 15:00' },
+                { day: 'Sun / Tue', hours: 'Closed', highlight: true },
+              ].map((item) => (
+                <div key={item.day} className="flex justify-between border-b border-outline-variant/20 pb-3">
+                  <span className="text-on-surface-variant uppercase text-sm">{item.day}</span>
+                  <span className={`font-headline font-bold text-sm uppercase ${item.highlight ? 'text-primary' : 'text-on-surface'}`}>
+                    {item.hours}
+                  </span>
+                </div>
+              ))}
+              <div className="pt-4 space-y-2">
+                <p className="text-xs text-outline uppercase tracking-widest font-headline">Important Notice</p>
+                <p className="text-on-surface-variant text-xs leading-relaxed">
+                  Clients arriving more than 5 minutes late will be considered a no-show. Please arrive 5–10 minutes before your appointment.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}

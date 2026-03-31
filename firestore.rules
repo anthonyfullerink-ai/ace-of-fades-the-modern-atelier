@@ -1,0 +1,20 @@
+rules_version='2'
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+      match /bookings/{bookingId} {
+        // Allow users to read/write their own bookings
+        // Allow admin (anthony@offgridmediagroup.com) to read/write all bookings
+        allow read, update, delete: if request.auth != null && (
+          request.auth.uid == resource.data.userId || 
+          request.auth.token.email == 'anthony@offgridmediagroup.com'
+        );
+        allow create: if request.auth != null;
+      }
+      
+      // Default rule for other collections (if any)
+      match /{document=**} {
+        allow read, write: if request.time < timestamp.date(2026, 4, 30);
+      }
+  }
+}
