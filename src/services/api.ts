@@ -10,7 +10,8 @@ import {
   updateDoc, 
   doc, 
   deleteDoc,
-  orderBy
+  orderBy,
+  limit
 } from 'firebase/firestore';
 
 export interface Booking {
@@ -57,7 +58,7 @@ export interface Client {
   noShowCount?: number;
 }
 
-const withTimeout = <T>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
+const withTimeout = <T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => 
@@ -68,10 +69,10 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
 
 export const createBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
   try {
-    return await withTimeout(addDoc(bookingsCollection, {
+    return await addDoc(bookingsCollection, {
       ...bookingData,
       createdAt: Date.now()
-    }));
+    });
   } catch (error) {
     console.error("Error creating booking: ", error);
     throw error;
@@ -128,7 +129,7 @@ export const cancelBooking = async (bookingId: string) => {
 
 export const getAllBookings = async (): Promise<Booking[]> => {
   try {
-    const q = query(bookingsCollection, orderBy("date", "desc"), orderBy("time", "desc"));
+    const q = query(bookingsCollection, orderBy("date", "desc"), orderBy("time", "desc"), limit(500));
     const querySnapshot = await withTimeout(getDocs(q));
     
     return querySnapshot.docs.map(doc => ({
@@ -289,8 +290,8 @@ export const getAllClients = async (): Promise<Client[]> => {
       clientMap.set(key, { ...data, uid: data.uid || docSnap.id });
     });
 
-    // 2. Fetch all bookings to find guest contacts not yet in user docs
-    const bookingsSnapshot = await withTimeout(getDocs(bookingsCollection));
+    // 2. Fetch recent bookings to find guest contacts not yet in user docs
+    const bookingsSnapshot = await withTimeout(getDocs(query(bookingsCollection, orderBy("createdAt", "desc"), limit(200))));
     const allBookings = bookingsSnapshot.docs.map(d => d.data() as Booking);
 
     // Merge booking contacts — only add if not already present

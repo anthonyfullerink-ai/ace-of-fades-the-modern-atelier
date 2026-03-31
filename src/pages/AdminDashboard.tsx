@@ -571,12 +571,15 @@ export default function AdminDashboard() {
                 {loading ? (
                     <div className="p-20 text-center flex flex-col items-center gap-4">
                         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                        <p className="font-headline uppercase tracking-widest text-sm">Syncing Schedule...</p>
+                        <div className="space-y-2">
+                          <p className="font-headline uppercase tracking-widest text-sm text-primary font-bold">Syncing Records...</p>
+                          <p className="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">This may take a moment on slower connections</p>
+                        </div>
                     </div>
                 ) : filteredBookings.length === 0 ? (
                     <div className="p-20 text-center opacity-50">
                         <AlertCircle className="mx-auto mb-4" size={48} />
-                        <p className="font-headline uppercase tracking-widest text-sm">No appointments found</p>
+                        <p className="font-headline uppercase tracking-widest text-sm">No records found matching filters</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
