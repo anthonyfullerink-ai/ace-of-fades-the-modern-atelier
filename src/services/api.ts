@@ -11,7 +11,8 @@ import {
   doc, 
   deleteDoc,
   orderBy,
-  limit
+  limit,
+  increment
 } from 'firebase/firestore';
 
 export interface Booking {
@@ -50,6 +51,25 @@ const blockedRangesCollection = collection(db, 'blocked_ranges');
 const usersCollection = collection(db, 'users');
 const settingsCollection = collection(db, 'settings');
 const servicesCollection = collection(db, 'services');
+const loginLogsCollection = collection(db, 'login_logs');
+const dailyStatsCollection = collection(db, 'daily_stats');
+
+export interface DailyStats {
+  id?: string;
+  visits: number;
+  bookings: number;
+  date: string; // YYYY-MM-DD
+}
+
+export interface LoginLog {
+  id?: string;
+  userId: string;
+  email: string;
+  displayName?: string;
+  timestamp: number;
+  role: 'admin' | 'client';
+  userAgent: string;
+}
 
 export interface DayHours {
   open: string;
@@ -887,4 +907,80 @@ export const isSlotAvailableForService = (
   });
 
   return !isBlocked;
+};
+
+// --- Audit Logs ---
+
+export const logLogin = async (user: any) => {
+  try {
+    const { ADMIN_EMAILS } = await import('../config/firebase');
+    const role = ADMIN_EMAILS.includes(user.email) ? 'admin' : 'client';
+    
+    const log: LoginLog = {
+      userId: user.uid,
+      email: user.email || 'unknown',
+      displayName: user.displayName || '',
+      timestamp: Date.now(),
+      role,
+      userAgent: navigator.userAgent
+    };
+    
+    await addDoc(loginLogsCollection, log);
+  } catch (err) {
+    console.error("Failed to log login:", err);
+  }
+};
+
+export const getLoginLogs = async (limitCount: number = 200): Promise<LoginLog[]> => {
+  try {
+    const q = query(loginLogsCollection, orderBy('timestamp', 'desc'), limit(limitCount));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LoginLog));
+  } catch (err) {
+    console.error("Failed to fetch login logs:", err);
+    return [];
+  }
+};
+
+// --- Website Metrics & Traffic Tracking ---
+
+const getTodayString = () => new Date().toISOString().split('T')[0];
+
+export const trackVisit = async () => {
+  try {
+    const today = getTodayString();
+    const statsRef = doc(db, 'daily_stats', today);
+    await setDoc(statsRef, { 
+      visits: increment(1),
+      date: today
+    }, { merge: true });
+  } catch (err) {
+    console.error("Failed to track visit:", err);
+  }
+};
+
+export const trackConversion = async () => {
+  try {
+    const today = getTodayString();
+    const statsRef = doc(db, 'daily_stats', today);
+    await setDoc(statsRef, { 
+      bookings: increment(1),
+      date: today
+    }, { merge: true });
+  } catch (err) {
+    console.error("Failed to track conversion:", err);
+  }
+};
+
+export const getTrafficStats = async (days: number = 30): Promise<DailyStats[]> => {
+  try {
+    const q = query(dailyStatsCollection, orderBy('date', 'desc'), limit(days));
+    const querySnapshot = await getDocs(q);
+    const stats = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DailyStats));
+    // Sort ascending for charts
+    return stats.sort((a, b) => a.date.localeCompare(b.date));
+  } catch (err) {
+    console.error("Failed to fetch traffic stats:", err);
+    return [];
+  }
 };

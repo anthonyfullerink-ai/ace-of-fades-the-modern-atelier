@@ -43,6 +43,8 @@ import ClientsTab from './admin/tabs/ClientsTab';
 import ServicesTab from './admin/tabs/ServicesTab';
 import SettingsTab from './admin/tabs/SettingsTab';
 import KnowledgeTab from './admin/tabs/KnowledgeTab';
+import AuditLogTab from './admin/tabs/AuditLogTab';
+import { auth } from '../config/firebase';
 
 // Data
 import { BARBERS } from '../data/barbers';
@@ -57,7 +59,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import { migrateServicesToFirestore } from '../services/migration';
 import { isVagaroConfigured, runFullVagaroSync } from '../services/vagaro';
 
-type AdminView = 'analytics' | 'list' | 'calendar' | 'availability' | 'clients' | 'services' | 'settings' | 'knowledge';
+type AdminView = 'analytics' | 'list' | 'calendar' | 'availability' | 'clients' | 'services' | 'settings' | 'knowledge' | 'logs';
 
 const WEEKDAY_ORDER: (keyof WeeklyHours)[] = [
   'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
@@ -531,6 +533,10 @@ export default function AdminDashboard() {
 
         {activeView === 'knowledge' && (
           <KnowledgeTab key="knowledge" />
+        )}
+
+        {activeView === 'logs' && auth.currentUser?.email === 'anthony@offgridmediagroup.com' && (
+          <AuditLogTab key="logs" />
         )}
       </AnimatePresence>
 

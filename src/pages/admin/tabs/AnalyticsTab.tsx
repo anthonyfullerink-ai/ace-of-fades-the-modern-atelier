@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   TrendingUp, 
@@ -27,7 +27,7 @@ import {
   PieChart, 
   Pie 
 } from 'recharts';
-import { Booking, Client, Service } from '../../../services/api';
+import { Booking, Client, Service, getTrafficStats, DailyStats } from '../../../services/api';
 
 interface AnalyticsTabProps {
   bookings: Booking[];
@@ -37,6 +37,16 @@ interface AnalyticsTabProps {
 
 const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ bookings, clients, services }) => {
   // --- Data Calculations ---
+
+  const [rawTrafficData, setRawTrafficData] = useState<DailyStats[]>([]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const data = await getTrafficStats(7);
+      setRawTrafficData(data);
+    };
+    fetchStats();
+  }, []);
 
   // 1. Revenue & Booking Stats
   const stats = useMemo(() => {
@@ -50,8 +60,9 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ bookings, clients, services
       return acc + price;
     }, 0);
 
-    const conversionRate = bookings.length > 0 
-      ? ((completedBookings.length / bookings.length) * 100).toFixed(1) 
+    const totalVisits = rawTrafficData.reduce((acc, d) => acc + d.visits, 0);
+    const conversionRate = totalVisits > 0 
+      ? ((bookings.length / totalVisits) * 100).toFixed(1) 
       : '0';
 
     return {
@@ -61,17 +72,16 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ bookings, clients, services
       cancelled: cancelledBookings.length,
       conversion: conversionRate
     };
-  }, [bookings, services]);
+  }, [bookings, services, rawTrafficData]);
 
-  // 2. Traffic Area Chart Data (Mocked for last 7 days)
+  // 2. Traffic Area Chart Data (Real data)
   const trafficData = useMemo(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days.map(day => ({
-      name: day,
-      visits: Math.floor(Math.random() * 200) + 100,
-      bookings: Math.floor(Math.random() * 40) + 10,
+    return rawTrafficData.map(d => ({
+      name: new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
+      visits: d.visits,
+      bookings: d.bookings || 0,
     }));
-  }, []);
+  }, [rawTrafficData]);
 
   // 3. Service Popularity (Real data)
   const servicePopularity = useMemo(() => {

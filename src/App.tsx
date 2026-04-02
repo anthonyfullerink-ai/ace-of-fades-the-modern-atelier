@@ -14,6 +14,7 @@ import Auth from './pages/Auth';
 import AdminDashboard from './pages/AdminDashboard';
 import ScrollToTop from './components/ScrollToTop';
 import { migrateServicesToFirestore } from './services/migration';
+import { trackVisit } from './services/api';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -57,6 +58,13 @@ export default function App() {
   useEffect(() => {
     // Run initial migration
     migrateServicesToFirestore();
+
+    // Track visit once per session
+    const hasVisited = sessionStorage.getItem('visited_today');
+    if (!hasVisited) {
+      trackVisit();
+      sessionStorage.setItem('visited_today', 'true');
+    }
   }, []);
 
   return (

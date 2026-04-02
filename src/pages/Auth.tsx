@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { Mail, Lock, ChevronRight, Loader2 } from 'lucide-react';
-import { initClientDoc } from '../services/api';
+import { initClientDoc, logLogin } from '../services/api';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -39,10 +39,12 @@ export default function Auth() {
       if (isLogin) {
         const { user } = await signInWithEmailAndPassword(auth, email, password);
         await initClientDoc(user);
+        await logLogin(user);
         toast.success("Welcome back!");
       } else {
         const { user } = await createUserWithEmailAndPassword(auth, email, password);
         await initClientDoc(user);
+        await logLogin(user);
         toast.success("Account created successfully!");
       }
     } catch (error: any) {

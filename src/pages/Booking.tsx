@@ -19,7 +19,8 @@ import {
   isSlotAvailableForService, 
   timeToMinutes,
   getServices,
-  Service
+  Service,
+  trackConversion
 } from '../services/api';
 import { sendBookingConfirmation } from '../services/email';
 import toast from 'react-hot-toast';
@@ -232,6 +233,7 @@ export default function Booking() {
         }
 
         toast.success("Booking confirmed!");
+        trackConversion();
         setStep(5);
     } catch (error) {
         console.error("Booking error:", error);

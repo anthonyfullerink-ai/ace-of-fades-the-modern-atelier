@@ -11,8 +11,10 @@ import {
   Scissors,
   BookOpen,
   RefreshCw,
-  BarChart3
+  BarChart3,
+  ShieldCheck
 } from 'lucide-react';
+import { auth } from '../../config/firebase';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -52,6 +54,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   stats
 }) => {
 
+  const navigationTabs = [...tabs];
+  if (auth.currentUser?.email === 'anthony@offgridmediagroup.com') {
+    navigationTabs.push({ id: 'logs', icon: ShieldCheck, title: 'Audit Logs' });
+  }
+
   return (
     <main className="pt-32 pb-24 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-16">
@@ -68,7 +75,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
           {/* Main Navigation Tab Switcher */}
           <div className="flex bg-surface-container-lowest p-1.5 border border-outline-variant/10 shadow-2xl rounded-none w-full md:w-auto justify-between md:justify-start">
-            {tabs.map((tab) => (
+            {navigationTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveView(tab.id)}
