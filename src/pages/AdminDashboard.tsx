@@ -110,6 +110,15 @@ export default function AdminDashboard() {
   const [newSpecialClosed, setNewSpecialClosed] = useState(false);
   const [newSpecialReason, setNewSpecialReason] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  
+  const bookingsByDate = useMemo(() => {
+    const map: Record<string, Booking[]> = {};
+    bookings.forEach(b => {
+      if (!map[b.date]) map[b.date] = [];
+      map[b.date].push(b);
+    });
+    return map;
+  }, [bookings]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -393,14 +402,7 @@ export default function AdminDashboard() {
             currentMonth={currentMonth}
             onPrevMonth={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
             onNextMonth={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-            bookingsByDate={useMemo(() => {
-                const map: Record<string, Booking[]> = {};
-                bookings.forEach(b => {
-                  if (!map[b.date]) map[b.date] = [];
-                  map[b.date].push(b);
-                });
-                return map;
-              }, [bookings])}
+            bookingsByDate={bookingsByDate}
             onDateSelect={(date) => {
               setAvailabilityDate(date);
               setActiveView('availability');
@@ -426,6 +428,8 @@ export default function AdminDashboard() {
           <ClientsTab 
             key="clients"
             clients={clients}
+            bookings={bookings}
+            services={services}
             clientSearch={clientSearch}
             setClientSearch={setClientSearch}
             clientStatusFilter={clientStatusFilter}

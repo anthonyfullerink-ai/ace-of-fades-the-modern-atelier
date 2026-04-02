@@ -83,7 +83,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             className="font-headline text-primary tracking-[0.3em] text-xs font-bold mb-4 uppercase"
           >
-            The Modern Atelier · Est. 2022 · Eatontown, NJ
+            Ace Of Fades · Est. 2022 · Eatontown, NJ
           </motion.p>
           
           {shopStatus && (
@@ -140,14 +140,21 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 gap-6">
               {services.map((service, index) => (
-                <div key={service.id} className="group relative bg-surface-container p-8 flex justify-between items-center transition-colors hover:bg-surface-container-high border-l-2 border-transparent hover:border-primary">
+                <Link 
+                  key={service.id} 
+                  to={`/book?serviceId=${service.id}`}
+                  className="group relative bg-surface-container p-8 flex justify-between items-center transition-all hover:bg-surface-container-high border-l-2 border-transparent hover:border-primary active:scale-[0.99] cursor-pointer"
+                >
                   <span className="absolute -left-2 text-7xl font-headline font-black text-outline-variant/10 pointer-events-none group-hover:opacity-20 transition-opacity">{(index + 1).toString().padStart(2, '0')}</span>
-                  <div className="relative z-10">
-                    <h4 className="font-headline text-xl font-bold tracking-tight uppercase text-on-surface">{service.name}</h4>
+                  <div className="relative z-10 pr-4">
+                    <h4 className="font-headline text-xl font-bold tracking-tight uppercase text-on-surface group-hover:text-primary transition-colors">{service.name}</h4>
                     <p className="text-on-surface-variant text-sm mt-1">{service.desc}</p>
                   </div>
-                  <span className="font-headline text-primary font-bold text-2xl">{service.price}</span>
-                </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className="font-headline text-primary font-bold text-2xl">{service.price}</span>
+                    <span className="text-[10px] tracking-widest uppercase text-outline font-black group-hover:text-primary transition-colors">Select Ritual</span>
+                  </div>
+                </Link>
               ))}
             </div>
           )}
@@ -319,7 +326,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto">
           <div className="mb-16">
             <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">04</span>
-            <h3 className="font-headline text-4xl font-bold tracking-tight uppercase">Atelier Access</h3>
+            <h3 className="font-headline text-4xl font-bold tracking-tight uppercase">Ace Of Fades Access</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="aspect-video bg-surface overflow-hidden relative group">

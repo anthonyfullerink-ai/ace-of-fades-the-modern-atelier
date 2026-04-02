@@ -119,7 +119,7 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50" size={18} />
             <input 
               type="text"
-              placeholder="Search by name or email..."
+              placeholder="Search by Client Identity or Email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 pl-12 focus:border-primary focus:outline-none transition-colors"
@@ -226,8 +226,8 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container-highest border-b border-outline-variant/20">
-                  <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Date / Time</th>
-                  <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Customer</th>
+                  <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Client Ritual</th>
+                  <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Client Identity</th>
                   <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Service</th>
                   <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Barber</th>
                   <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Status</th>
@@ -242,7 +242,7 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
                       <div className="font-headline font-bold text-primary">{booking.time}</div>
                     </td>
                     <td className="p-6">
-                      <div className="font-headline font-bold uppercase">{booking.customerName || 'Guest'}</div>
+                      <div className="font-headline font-bold uppercase">{booking.customerName || 'Guest Client'}</div>
                       <div className="font-body text-xs text-on-surface-variant">{booking.customerEmail || 'No email provided'}</div>
                     </td>
                     <td className="p-6">

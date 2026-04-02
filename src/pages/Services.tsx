@@ -48,7 +48,7 @@ export default function Services() {
             THE<br/>MENU
           </h1>
           <p className="text-on-surface-variant font-body mt-8 max-w-xl text-lg leading-relaxed">
-            Curated grooming experiences designed for the modern atelier. Every service is a deliberate ritual of precision and style.
+            Curated grooming experiences designed for Ace Of Fades. Every service is a deliberate ritual of precision and style.
           </p>
         </motion.div>
       </section>

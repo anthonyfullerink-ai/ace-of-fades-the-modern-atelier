@@ -272,7 +272,7 @@ export default function Booking() {
           </div>
           <h2 className="font-headline text-4xl font-bold uppercase tracking-tight text-red-500 mb-6">Reservation Access Revoked</h2>
           <p className="text-on-surface-variant font-body max-w-md mx-auto text-lg leading-relaxed">
-            Due to previous policy violations, online booking is unavailable. Please coordinate with the atelier management directly.
+            Due to previous policy violations, online booking is unavailable. Please coordinate with Ace Of Fades management directly.
           </p>
         </motion.div>
       ) : !selectedService ? (
@@ -295,7 +295,7 @@ export default function Booking() {
             <div className="mb-12 relative">
                <span className="font-headline text-xs tracking-[0.4em] text-primary uppercase font-bold mb-4 block">The Artisans</span>
                <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface uppercase leading-none">
-                 Select Your<br/>Practitioner
+                 Select Your<br/>Artisan
                </h1>
             </div>
 
@@ -350,7 +350,7 @@ export default function Booking() {
             <div className="mb-12">
                <span className="font-headline text-xs tracking-[0.4em] text-primary uppercase font-bold mb-4 block">Availability</span>
                <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface uppercase leading-none">
-                 Choose A<br/>Consultation Date
+                 Select Your<br/>Ritual Date
                </h1>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -409,7 +409,7 @@ export default function Booking() {
             <div className="mb-12">
                <span className="font-headline text-xs tracking-[0.4em] text-primary uppercase font-bold mb-4 block">Precision</span>
                <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface uppercase leading-none">
-                 Select Your<br/>Time Slot
+                 Select Your<br/>Ritual Time
                </h1>
             </div>
             
@@ -419,16 +419,16 @@ export default function Booking() {
                    <div className="w-20 h-20 border-2 border-primary/20 rounded-full"></div>
                    <div className="absolute top-0 left-0 w-20 h-20 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <p className="font-headline uppercase tracking-[0.4em] text-xs text-primary animate-pulse font-black">Syncing Atelier Schedule</p>
+                <p className="font-headline uppercase tracking-[0.4em] text-xs text-primary animate-pulse font-black">Syncing Ritual Schedule</p>
               </div>
             ) : availableTimes.length === 0 ? (
               <div className="text-center py-24 bg-surface-container/30 backdrop-blur-md border border-outline-variant/10 p-12">
-                <p className="font-headline text-2xl uppercase tracking-widest text-on-surface-variant opacity-60 mb-8 font-bold">Atelier fully booked for this cycle</p>
+                <p className="font-headline text-2xl uppercase tracking-widest text-on-surface-variant opacity-60 mb-8 font-bold">Ace Of Fades fully booked for this ritual cycle</p>
                 <button 
                   onClick={() => setStep(2)}
                   className="gold-gradient px-12 py-5 text-on-primary font-headline uppercase font-bold tracking-widest shadow-xl"
                 >
-                  Explore Alternative Dates
+                  Explore Alternative Rituals
                 </button>
               </div>
             ) : (
@@ -469,7 +469,7 @@ export default function Booking() {
             </div>
 
             <h1 className="font-headline text-5xl font-bold tracking-tighter text-on-surface uppercase mb-16 text-center leading-none">
-              Review Your<br/><span className="text-primary">Ritual details</span>
+              Review Your<br/><span className="text-primary">Ritual Details</span>
             </h1>
             
             <div className="space-y-12 mb-20 relative z-10">
@@ -495,7 +495,7 @@ export default function Booking() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div className="flex flex-col gap-6">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.4em] text-primary/60 font-black mb-3">Appointment Schedule</p>
+                    <p className="text-[10px] uppercase tracking-[0.4em] text-primary/60 font-black mb-3">Ritual Schedule</p>
                     <div className="flex items-center gap-4 text-on-surface">
                       <div className="w-10 h-10 rounded-full bg-primary/5 border border-primary/20 flex items-center justify-center">
                         <CalendarIcon size={16} className="text-primary" />
@@ -519,7 +519,7 @@ export default function Booking() {
                     <h4 className="font-headline font-black uppercase text-xs tracking-[0.3em]">Protocol</h4>
                   </div>
                   <p className="text-on-surface-variant text-sm leading-relaxed font-body">
-                    Elegance is timely. Appointments with a <span className="text-on-surface font-black">5-minute delay</span> will be considered forfeited. We recommend arriving 10 minutes prior for the full experience.
+                    Elegance is timely. Rituals with a <span className="text-on-surface font-black">5-minute delay</span> will be considered forfeited. We recommend arriving 10 minutes prior for the full experience.
                   </p>
                 </div>
               </div>
@@ -534,7 +534,7 @@ export default function Booking() {
                 {isSubmitting ? (
                     <><Loader2 className="animate-spin" size={24} /> Processing Ritual...</>
                 ) : (
-                    <>Establish Appointment <CheckCircle size={20} /></>
+                    <>Establish Ritual <CheckCircle size={20} /></>
                 )}
               </button>
               <button 
@@ -562,7 +562,7 @@ export default function Booking() {
               RITUAL<br/><span className="text-primary">SECURED</span>
             </h1>
             <p className="text-on-surface-variant text-xl mb-16 max-w-lg mx-auto leading-relaxed">
-              Your appointment with <span className="text-primary font-black uppercase tracking-widest">{selectedBarber?.name}</span> is confirmed for {selectedTime} on {new Date(selectedDate! + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}.
+              Your ritual with <span className="text-primary font-black uppercase tracking-widest">{selectedBarber?.name}</span> is confirmed for {selectedTime} on {new Date(selectedDate! + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}.
             </p>
             <div className="flex flex-col md:flex-row gap-4 justify-center">
               <button 

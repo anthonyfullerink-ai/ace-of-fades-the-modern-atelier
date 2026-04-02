@@ -90,7 +90,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({
                             : 'bg-primary/10 text-primary border-primary'
                         }`}
                       >
-                        {b.time} - {b.customerName}
+                        {b.time} - {b.customerName || 'Guest Client'}
                       </div>
                     );
                   })}

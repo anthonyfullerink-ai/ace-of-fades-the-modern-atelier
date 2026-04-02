@@ -16,7 +16,7 @@ export default function KnowledgeTab() {
           <h2 className="font-headline text-3xl font-bold uppercase tracking-tighter">Knowledge Base</h2>
         </div>
         <p className="text-on-surface-variant font-body text-sm leading-relaxed max-w-3xl">
-          Welcome to the Atelier's Operations Manual. This guide is designed to help you navigate the administrative portal, manage the studio's daily workflow, and troubleshoot common scenarios.
+          Welcome to the Ace Of Fades Operations Manual. This guide is designed to help you navigate the administrative portal, manage the studio's daily workflow, and troubleshoot common scenarios.
         </p>
       </div>
 

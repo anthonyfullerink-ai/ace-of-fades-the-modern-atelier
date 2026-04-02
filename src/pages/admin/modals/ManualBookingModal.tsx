@@ -162,12 +162,12 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
         <form onSubmit={handleSubmit} className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-3 relative" ref={clientRef}>
-              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Customer Identity</label>
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Client Identity</label>
               <div className="relative">
                 <input 
                   required 
                   type="text" 
-                  placeholder="Search Existing or Type New Name" 
+                  placeholder="Search Existing or Type Name" 
                   value={formData.name} 
                   onFocus={() => setShowClientList(true)}
                   onChange={e => {

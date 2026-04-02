@@ -19,7 +19,7 @@ export default function Footer() {
         <div className="flex flex-col items-center md:items-start gap-8">
           <img src="/logo.png" alt="Ace of Fades Logo" className="h-14 w-auto object-contain brightness-0 invert opacity-100" />
           <p className="font-body text-sm text-on-surface-variant max-w-xs leading-relaxed text-center md:text-left opacity-80 italic tracking-wide">
-            Precision grooming for the modern gentleman. Elevating the art of the fade in an exclusive, high-end atelier setting.
+            Precision grooming for the modern gentleman. Elevating the art of the fade in an exclusive, high-end Ace Of Fades setting.
           </p>
           <div className="flex gap-4">
             <a href="#" className="w-10 h-10 rounded-full border border-outline-variant/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-all duration-500 group">
@@ -44,7 +44,7 @@ export default function Footer() {
 
         {/* Contact info */}
         <div className="flex flex-col items-center md:items-end gap-8 text-center md:text-right">
-           <h4 className="font-headline text-primary text-[10px] tracking-[0.5em] uppercase font-black">Atelier</h4>
+           <h4 className="font-headline text-primary text-[10px] tracking-[0.5em] uppercase font-black">Ace Of Fades</h4>
            <div className="flex flex-col gap-4">
              <div className="flex flex-col gap-1 items-center md:items-end">
                <span className="text-outline text-[10px] uppercase tracking-[0.2em] mb-1">Location</span>
@@ -66,7 +66,7 @@ export default function Footer() {
 
       <div className="w-full pt-16 border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-8">
         <p className="text-outline font-headline text-[9px] tracking-[0.4em] uppercase opacity-60">
-          © {new Date().getFullYear()} ACE OF FADES ATELIER.
+          © {new Date().getFullYear()} ACE OF FADES.
         </p>
         <div className="flex gap-8">
            <Link to="/admin" className="font-headline text-[9px] tracking-[0.4em] uppercase text-outline hover:text-primary transition-colors">Admin</Link>

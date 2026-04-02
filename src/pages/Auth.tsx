@@ -69,7 +69,7 @@ export default function Auth() {
            <span className="font-headline text-[10px] tracking-[0.5em] text-primary uppercase font-black mb-4 block">Portal Access</span>
            <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tighter text-on-surface uppercase leading-none">
              {isLogin ? 'Welcome' : 'Join the'}<br/>
-             <span className="text-primary">{isLogin ? 'Back' : 'Atelier'}</span>
+             <span className="text-primary">{isLogin ? 'Back' : 'Ace Of Fades'}</span>
            </h1>
            <div className="w-12 h-px bg-outline-variant/30 mx-auto mt-8"></div>
         </div>

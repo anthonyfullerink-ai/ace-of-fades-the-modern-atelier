@@ -239,7 +239,7 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-primary uppercase"
         >
-          MY APPOINTMENTS
+          MY RITUALS
         </motion.h1>
       </section>
 
@@ -247,12 +247,12 @@ export default function Dashboard() {
       <section className="mb-24">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-headline text-xl tracking-widest text-on-surface uppercase border-l-4 border-primary pl-4">
-            Upcoming Sessions
+            Upcoming Rituals
           </h2>
         </div>
         
         {upcoming.length === 0 ? (
-          <p className="text-on-surface-variant italic">No upcoming appointments.</p>
+          <p className="text-on-surface-variant italic">No upcoming rituals.</p>
         ) : (
           <div className="space-y-12">
             {upcoming.map((session, index) => (
@@ -331,7 +331,7 @@ export default function Dashboard() {
                           onClick={() => handleCancel(session.id!)}
                           className="text-on-surface-variant hover:text-error font-headline text-[10px] tracking-[0.2em] py-2 transition-colors duration-300 uppercase"
                         >
-                          CANCEL APPOINTMENT
+                          CANCEL RITUAL
                         </button>
                       </>
                     )}
@@ -347,13 +347,13 @@ export default function Dashboard() {
       <section>
         <div className="flex items-center justify-between mb-12">
           <h2 className="font-headline text-xl tracking-widest text-on-surface-variant uppercase border-l-4 border-outline-variant pl-4">
-            Past Cuts
+            Ritual History
           </h2>
           <div className="h-[1px] flex-grow mx-8 bg-outline-variant/20"></div>
         </div>
         
         {past.length === 0 ? (
-           <p className="text-on-surface-variant italic">No past appointments.</p>
+           <p className="text-on-surface-variant italic">No ritual history found.</p>
         ) : (
           <div className="space-y-0">
             {past.map((item, index) => (
