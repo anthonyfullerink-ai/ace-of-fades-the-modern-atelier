@@ -26,7 +26,10 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 // Admin Whitelist
-export const ADMIN_EMAILS = ['anthony@offgridmediagroup.com'];
+export const ADMIN_EMAILS = [
+  'anthony@offgridmediagroup.com',
+  'admin@offgridmediagroup.com'
+];
 
 export const isAdmin = (user: any) => {
   return user && user.email && ADMIN_EMAILS.includes(user.email);
