@@ -129,11 +129,13 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
     }
     setSubmitting(true);
     try {
+      const selectedService = services.find(s => s.id === formData.serviceId);
       await createBooking({ 
         userId: formData.uid || `manual-entry-${Date.now()}`, 
         customerName: formData.name, 
         customerEmail: formData.email, 
         serviceId: formData.serviceId, 
+        serviceDuration: selectedService?.duration,
         date: formData.date, 
         time: formData.time, 
         status: 'Upcoming', 

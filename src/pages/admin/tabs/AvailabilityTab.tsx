@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Calendar, Ban, Clock } from 'lucide-react';
-import { BlockedSlot, Booking } from '../../../services/api';
+import { BlockedSlot, Booking, timeToMinutes } from '../../../services/api';
 
 interface AvailabilityTabProps {
   availabilityDate: string;
@@ -67,7 +67,17 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {adminTimeSlots.map((time) => {
                 const isBlocked = blockedSlots.some(s => s.time === time);
-                const hasBooking = bookings.some(b => b.date === availabilityDate && b.time === time && b.status !== 'Cancelled');
+                const hasBooking = bookings.some(b => {
+                  if (b.date !== availabilityDate || b.status === 'Cancelled') return false;
+                  
+                  const bStart = timeToMinutes(b.time);
+                  const bDuration = Number(b.serviceDuration || 30);
+                  const bEnd = bStart + bDuration;
+                  const sStart = timeToMinutes(time);
+                  
+                  // A slot is "occupied" if the slot's start time falls within [bookingStart, bookingEnd)
+                  return sStart >= bStart && sStart < bEnd;
+                });
                 return (
                   <button
                     key={time}

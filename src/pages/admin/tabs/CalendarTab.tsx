@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Booking } from '../../../services/api';
+import { Booking, timeToMinutes, minutesToTime } from '../../../services/api';
 
 interface CalendarTabProps {
   currentMonth: Date;
@@ -90,7 +90,7 @@ const CalendarTab: React.FC<CalendarTabProps> = ({
                             : 'bg-primary/10 text-primary border-primary'
                         }`}
                       >
-                        {b.time} - {b.customerName || 'Guest Client'}
+                        {b.time} {b.serviceDuration && b.serviceDuration > 0 && `- ${minutesToTime(timeToMinutes(b.time) + b.serviceDuration)} `} - {b.customerName || 'Guest Client'}
                       </div>
                     );
                   })}

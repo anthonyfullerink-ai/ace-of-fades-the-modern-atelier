@@ -9,7 +9,8 @@ import {
   Plus, 
   ArrowUpDown,
   Scissors,
-  BookOpen
+  BookOpen,
+  RefreshCw
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -18,6 +19,8 @@ interface AdminLayoutProps {
   setActiveView: (view: any) => void;
   onAddBooking: () => void;
   onSyncData: () => void;
+  onVagaroSync?: () => void;
+  isVagaroSyncing?: boolean;
   stats: {
     total: number;
     today: number;
@@ -32,6 +35,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   setActiveView,
   onAddBooking,
   onSyncData,
+  onVagaroSync,
+  isVagaroSyncing,
   stats
 }) => {
   const tabs = [
@@ -89,6 +94,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             >
               <ArrowUpDown size={18} />
             </button>
+            {onVagaroSync && (
+              <button 
+                onClick={onVagaroSync}
+                disabled={isVagaroSyncing}
+                className="md:flex-none flex items-center justify-center gap-2 px-5 py-4 border border-outline-variant/20 text-on-surface-variant hover:text-primary hover:border-primary transition-all bg-surface-container/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Vagaro"
+              >
+                <RefreshCw size={16} className={isVagaroSyncing ? 'animate-spin' : ''} />
+                <span className="hidden md:inline font-headline uppercase text-[10px] tracking-[0.15em] font-bold">Vagaro</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

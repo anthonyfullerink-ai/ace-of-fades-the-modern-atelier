@@ -12,7 +12,16 @@ import {
   getClientByUid, 
   Client,
   getServices,
-  Service
+  Service,
+  getBusinessSettings,
+  getBlockedRanges,
+  getBookingsByDate,
+  getBlockedSlots,
+  getShopHoursForDate,
+  generateTimeSlots,
+  isSlotAvailableForService,
+  BusinessSettings,
+  BlockedRange
 } from '../services/api';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -41,6 +50,11 @@ export default function Dashboard() {
     onConfirm: () => void;
     isDangerous?: boolean;
   }>({ show: false, title: '', message: '', onConfirm: () => {} });
+
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [loadingTimes, setLoadingTimes] = useState(false);
+  const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
+  const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -94,8 +108,70 @@ export default function Dashboard() {
     if (user) {
       fetchData();
       fetchProfile();
+      
+      // Load business settings for rescheduling
+      const loadSettings = async () => {
+        try {
+          const [settings, ranges] = await Promise.all([
+            getBusinessSettings(),
+            getBlockedRanges()
+          ]);
+          setBusinessSettings(settings);
+          setBlockedRanges(ranges);
+        } catch (e) {
+          console.error("Failed to load settings", e);
+        }
+      };
+      loadSettings();
     }
   }, [user]);
+
+  // Fetch availability when date changes during rescheduling
+  useEffect(() => {
+    if (!reschedulingId || !newDate || !businessSettings) return;
+    
+    const fetchAvailability = async () => {
+      setLoadingTimes(true);
+      try {
+        const booking = bookings.find(b => b.id === reschedulingId);
+        if (!booking) return;
+
+        const service = services.find(s => s.id === booking.serviceId);
+        const duration = service?.duration || booking.serviceDuration || 30;
+
+        const hours = getShopHoursForDate(businessSettings, newDate, blockedRanges);
+        if (hours.closed) {
+          setAvailableTimes([]);
+          return;
+        }
+
+        const [dayBookings, blockedSlots] = await Promise.all([
+          getBookingsByDate(newDate),
+          getBlockedSlots(newDate)
+        ]);
+
+        const allPossibleSlots = generateTimeSlots(hours.open, hours.close);
+        
+        // Filter slots - exclude current booking from overlap check, and only consider same barber
+        const filtered = allPossibleSlots.filter(slot => 
+          isSlotAvailableForService(
+            slot, 
+            duration, 
+            hours, 
+            dayBookings.filter(b => b.id !== reschedulingId && b.barber === booking.barber), 
+            blockedSlots
+          )
+        );
+        
+        setAvailableTimes(filtered);
+      } catch (e) {
+        console.error("Failed to fetch availability", e);
+      } finally {
+        setLoadingTimes(false);
+      }
+    };
+    fetchAvailability();
+  }, [newDate, reschedulingId, businessSettings, blockedRanges, services, bookings]);
 
   const handleCancel = async (id: string) => {
     setConfirmModal({
@@ -140,8 +216,6 @@ export default function Dashboard() {
 
   const upcoming = bookings.filter(b => b.status === 'Upcoming');
   const past = bookings.filter(b => b.status === 'Completed' || b.status === 'Cancelled');
-
-  const availableTimes = ['09:00 AM', '10:00 AM', '11:00 AM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
 
   if (loading) {
     return (
@@ -293,11 +367,12 @@ export default function Dashboard() {
                           className="bg-transparent border border-outline-variant/30 text-on-surface text-sm p-2 w-full focus:border-primary focus:outline-none"
                         />
                         <select 
+                          disabled={loadingTimes || availableTimes.length === 0}
                           value={newTime}
                           onChange={e => setNewTime(e.target.value)}
-                          className="bg-surface border border-outline-variant/30 text-on-surface text-sm p-2 w-full focus:border-primary focus:outline-none"
+                          className={`bg-surface border border-outline-variant/30 text-on-surface text-sm p-2 w-full focus:border-primary focus:outline-none ${availableTimes.length === 0 ? 'opacity-50' : ''}`}
                         >
-                          <option value="">Select Time</option>
+                          <option value="">{loadingTimes ? 'Syncing...' : availableTimes.length === 0 ? 'Closed/Full' : 'Select Time'}</option>
                           {availableTimes.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                         <div className="flex gap-2">

@@ -54,6 +54,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 
 // Services
 import { migrateServicesToFirestore } from '../services/migration';
+import { isVagaroConfigured, runFullVagaroSync } from '../services/vagaro';
 
 type AdminView = 'list' | 'calendar' | 'availability' | 'clients' | 'services' | 'settings' | 'knowledge';
 
@@ -110,6 +111,7 @@ export default function AdminDashboard() {
   const [newSpecialClosed, setNewSpecialClosed] = useState(false);
   const [newSpecialReason, setNewSpecialReason] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isVagaroSyncing, setIsVagaroSyncing] = useState(false);
   
   const bookingsByDate = useMemo(() => {
     const map: Record<string, Booking[]> = {};
@@ -134,6 +136,17 @@ export default function AdminDashboard() {
       setBusinessSettings(s);
       setBlockedRanges(r);
       setServices(sv);
+
+      // Auto-sync Vagaro data in background if configured
+      if (isVagaroConfigured()) {
+        runFullVagaroSync().then(() => {
+          // Silently refresh after Vagaro sync completes
+          Promise.all([getAllBookings(), getAllClients()]).then(([nb, nc]) => {
+            setBookings(nb);
+            setClients(nc);
+          });
+        }).catch(err => console.warn('Background Vagaro sync skipped:', err));
+      }
     } catch (error) {
       toast.error("Failed to sync application data");
     } finally {
@@ -356,6 +369,28 @@ export default function AdminDashboard() {
     return await migrateServicesToFirestore();
   };
 
+  const handleVagaroSync = async () => {
+    setIsVagaroSyncing(true);
+    try {
+      const result = await runFullVagaroSync();
+      const totalSynced = result.appointments.synced + result.clients.synced;
+      const totalSkipped = result.appointments.skipped + result.clients.skipped;
+      if (totalSynced > 0) {
+        toast.success(`Vagaro sync: ${totalSynced} new records imported`);
+      } else if (totalSkipped > 0) {
+        toast.success(`Vagaro sync: All records up to date`);
+      } else {
+        toast.success('Vagaro sync complete — no new data');
+      }
+      await fetchData();
+    } catch (error) {
+      toast.error('Vagaro sync failed. Check console for details.');
+      console.error('Vagaro sync error:', error);
+    } finally {
+      setIsVagaroSyncing(false);
+    }
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-6">
       <div className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -369,6 +404,8 @@ export default function AdminDashboard() {
       setActiveView={setActiveView}
       onAddBooking={() => setShowManualBooking(true)}
       onSyncData={fetchData}
+      onVagaroSync={isVagaroConfigured() ? handleVagaroSync : undefined}
+      isVagaroSyncing={isVagaroSyncing}
       stats={stats}
     >
       <AnimatePresence mode="wait">
@@ -404,8 +441,9 @@ export default function AdminDashboard() {
             onNextMonth={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
             bookingsByDate={bookingsByDate}
             onDateSelect={(date) => {
-              setAvailabilityDate(date);
-              setActiveView('availability');
+              setBookingDateFilter(date);
+              setBookingFilter('All');
+              setActiveView('list');
             }}
           />
         )}

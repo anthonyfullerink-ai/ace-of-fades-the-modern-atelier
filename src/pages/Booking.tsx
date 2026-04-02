@@ -126,11 +126,14 @@ export default function Booking() {
 
             const filtered = allPossibleSlots.filter(slot => {
                 // 1. Core availability (Shop hours, overlaps, manual blocks)
+                // IMPORTANT: Filter bookings to only those for the selected barber
+                const barberBookings = dayBookings.filter(b => b.barber === selectedBarber?.name);
+                
                 const isAvailable = isSlotAvailableForService(
                   slot, 
                   serviceDuration, 
                   hours, 
-                  dayBookings, 
+                  barberBookings, 
                   blockedSlots
                 );
                 
@@ -154,7 +157,7 @@ export default function Booking() {
     };
 
     fetchAvailability();
-  }, [selectedDate, blockedRanges, businessSettings, selectedService]);
+  }, [selectedDate, blockedRanges, businessSettings, selectedService, selectedBarber]);
 
   // Available dates (next 45 days)
   const availableDates = useMemo(() => {
@@ -206,6 +209,7 @@ export default function Booking() {
             customerName: user.displayName || 'Client',
             customerEmail: user.email || '',
             serviceId: selectedService.id,
+            serviceDuration: selectedService.duration,
             date: selectedDate,
             time: selectedTime,
             status: 'Upcoming',

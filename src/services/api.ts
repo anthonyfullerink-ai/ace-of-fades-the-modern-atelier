@@ -26,6 +26,8 @@ export interface Booking {
   status: 'Upcoming' | 'Completed' | 'Cancelled' | 'No-Show';
   barber: string;
   createdAt?: number;
+  source?: 'local' | 'vagaro'; // origin of the booking
+  externalId?: string; // ID from external system (e.g., Vagaro)
 }
 
 export interface BlockedSlot {
@@ -111,6 +113,8 @@ export interface Client {
   isGuest?: boolean;
   suspended?: boolean;
   noShowCount?: number;
+  source?: 'local' | 'vagaro'; // origin of the client record
+  externalId?: string; // ID from external system (e.g., Vagaro)
 }
 
 const withTimeout = <T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
@@ -125,13 +129,45 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
 export const createBooking = async (booking: Booking): Promise<string> => {
   try {
     // If duration is missing, try to find it (for manual entries or legacy support)
-    let finalBooking = { ...booking };
+    let finalBooking = { ...booking, source: booking.source || 'local' as const };
     if (!finalBooking.serviceDuration) {
-      const { SERVICES } = await import('../data/services');
-      const service = SERVICES.find(s => s.id === booking.serviceId);
-      if (service) {
-        finalBooking.serviceDuration = service.duration;
+      // 1. Try to fetch from Firestore first (most accurate)
+      try {
+        const serviceRef = doc(db, 'services', booking.serviceId);
+        const serviceSnap = await getDoc(serviceRef);
+        if (serviceSnap.exists()) {
+          finalBooking.serviceDuration = (serviceSnap.data() as any).duration;
+        } else {
+          // 2. Fallback to static data
+          const { SERVICES } = await import('../data/services');
+          const service = SERVICES.find(s => s.id === booking.serviceId);
+          if (service) {
+            finalBooking.serviceDuration = service.duration;
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to fetch service duration during booking creation", e);
       }
+    }
+
+    // Check for booking conflicts before creating
+    try {
+      const { checkBookingConflict } = await import('./bookingConflicts');
+      const conflict = await checkBookingConflict(
+        finalBooking.date,
+        finalBooking.time,
+        finalBooking.serviceDuration || 30,
+        finalBooking.barber
+      );
+      if (conflict.hasConflict) {
+        throw new Error(`Booking conflict: ${conflict.reason}`);
+      }
+    } catch (conflictError: any) {
+      // Re-throw actual conflict errors, but swallow import/network errors
+      if (conflictError?.message?.startsWith('Booking conflict:')) {
+        throw conflictError;
+      }
+      console.warn('Conflict check skipped:', conflictError);
     }
 
     const docRef = await addDoc(bookingsCollection, { 
@@ -332,7 +368,8 @@ export const getBlockedSlots = async (date?: string): Promise<BlockedSlot[]> => 
 
 export const addBlockedSlot = async (slot: Omit<BlockedSlot, 'id'>) => {
   try {
-    return await addDoc(blockedSlotsCollection, slot);
+    const docRef = await addDoc(blockedSlotsCollection, slot);
+    return docRef.id;
   } catch (error) {
     console.error("Error adding blocked slot:", error);
     throw error;
@@ -365,7 +402,8 @@ export const getBlockedRanges = async (): Promise<BlockedRange[]> => {
 
 export const addBlockedRange = async (range: Omit<BlockedRange, 'id'>) => {
   try {
-    return await addDoc(blockedRangesCollection, range);
+    const docRef = await addDoc(blockedRangesCollection, range);
+    return docRef.id;
   } catch (error) {
     console.error("Error adding blocked range:", error);
     throw error;
@@ -592,6 +630,20 @@ export const deleteService = async (serviceId: string) => {
   }
 };
 
+export const getServiceById = async (id: string): Promise<Service | null> => {
+  try {
+    const serviceRef = doc(db, 'services', id);
+    const docSnap = await getDoc(serviceRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Service;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting service by ID:", error);
+    return null;
+  }
+};
+
 // --- Business Settings ---
 
 export const getBusinessSettings = async (): Promise<BusinessSettings> => {
@@ -735,14 +787,27 @@ export const isShopOpen = (settings: BusinessSettings, externalBlockedRanges: Bl
 };
 /**
  * Converts a time string (e.g., "10:00", "02:30 PM", "14:30") to minutes from midnight.
+ * High robustness against non-standard whitespace (common in browser time formatting).
  */
 export const timeToMinutes = (timeStr: string): number => {
   if (!timeStr) return 0;
   
-  // Handle "HH:mm AM/PM" format
-  if (timeStr.includes('AM') || timeStr.includes('PM')) {
-    const [time, period] = timeStr.split(' ');
-    const [hStr, mStr] = time.split(':');
+  // Normalize string: Replace any whitespace sequence with a standard space and trim
+  const normalized = timeStr.replace(/\s+/g, ' ').trim().toUpperCase();
+  
+  // Handle "HH:mm AM/PM" or "HH:mmAM/PM"
+  if (normalized.includes('AM') || normalized.includes('PM')) {
+    let timePart, period;
+    
+    if (normalized.includes(' ')) {
+      [timePart, period] = normalized.split(' ');
+    } else {
+      // Handle cases like "14:30PM" or "2:00AM"
+      timePart = normalized.replace(/[AP]M/, '');
+      period = normalized.includes('AM') ? 'AM' : 'PM';
+    }
+    
+    const [hStr, mStr] = timePart.split(':');
     let h = parseInt(hStr);
     const m = parseInt(mStr);
     
@@ -753,8 +818,8 @@ export const timeToMinutes = (timeStr: string): number => {
   }
   
   // Handle "HH:mm" format (24-hour)
-  const [h, m] = timeStr.split(':').map(Number);
-  return h * 60 + m;
+  const [h, m] = normalized.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
 };
 
 /**
@@ -765,10 +830,8 @@ export const minutesToTime = (minutes: number): string => {
   const m = minutes % 60;
   const period = h >= 12 ? 'PM' : 'AM';
   
-  if (h > 12) h -= 12;
-  if (h === 0) h = 12;
-  
-  return `${h}:${m.toString().padStart(2, '0')} ${period}`;
+  const displayH = h % 12 || 12;
+  return `${displayH}:${m.toString().padStart(2, '0')} ${period}`;
 };
 /**
  * Formats a time string like "10:30" or "18:00" to "12 PM"
@@ -794,7 +857,7 @@ export const isSlotAvailableForService = (
   if (shopHours.closed) return false;
 
   const slotStart = timeToMinutes(slotTimeStr);
-  const slotEnd = slotStart + serviceDuration;
+  const slotEnd = slotStart + Number(serviceDuration);
   const shopOpen = timeToMinutes(shopHours.open);
   const shopClose = timeToMinutes(shopHours.close);
 
@@ -807,7 +870,7 @@ export const isSlotAvailableForService = (
     
     const bStart = timeToMinutes(booking.time);
     // Use stored duration, fallback to 30 mins for legacy
-    const bDuration = booking.serviceDuration || 30; 
+    const bDuration = Number(booking.serviceDuration || 30); 
     const bEnd = bStart + bDuration;
 
     // Overlap condition: (StartA < EndB) && (EndA > StartB)
