@@ -35,6 +35,7 @@ import {
 
 // Components
 import AdminLayout from './admin/AdminLayout';
+import AnalyticsTab from './admin/tabs/AnalyticsTab';
 import AppointmentsTab from './admin/tabs/AppointmentsTab';
 import CalendarTab from './admin/tabs/CalendarTab';
 import AvailabilityTab from './admin/tabs/AvailabilityTab';
@@ -56,14 +57,14 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import { migrateServicesToFirestore } from '../services/migration';
 import { isVagaroConfigured, runFullVagaroSync } from '../services/vagaro';
 
-type AdminView = 'list' | 'calendar' | 'availability' | 'clients' | 'services' | 'settings' | 'knowledge';
+type AdminView = 'analytics' | 'list' | 'calendar' | 'availability' | 'clients' | 'services' | 'settings' | 'knowledge';
 
 const WEEKDAY_ORDER: (keyof WeeklyHours)[] = [
   'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
 ];
 
 export default function AdminDashboard() {
-  const [activeView, setActiveView] = useState<AdminView>('list');
+  const [activeView, setActiveView] = useState<AdminView>('analytics');
   const [loading, setLoading] = useState(true);
 
   // Data State
@@ -410,6 +411,14 @@ export default function AdminDashboard() {
       stats={stats}
     >
       <AnimatePresence mode="wait">
+        {activeView === 'analytics' && (
+          <AnalyticsTab 
+            bookings={bookings}
+            clients={clients}
+            services={services}
+          />
+        )}
+
         {activeView === 'list' && (
           <AppointmentsTab 
             key="list"

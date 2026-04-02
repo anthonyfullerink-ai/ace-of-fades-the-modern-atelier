@@ -10,7 +10,8 @@ import {
   ArrowUpDown,
   Scissors,
   BookOpen,
-  RefreshCw
+  RefreshCw,
+  BarChart3
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -40,6 +41,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   stats
 }) => {
   const tabs = [
+    { id: 'analytics', icon: BarChart3, title: 'Analytics' },
     { id: 'list', icon: LayoutList, title: 'Appointments' },
     { id: 'calendar', icon: CalendarDays, title: 'Calendar' },
     { id: 'availability', icon: Clock, title: 'Availability' },
