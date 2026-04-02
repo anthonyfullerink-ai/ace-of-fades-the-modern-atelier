@@ -8,7 +8,8 @@ import {
   Settings, 
   Plus, 
   ArrowUpDown,
-  Scissors
+  Scissors,
+  BookOpen
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -39,7 +40,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { id: 'availability', icon: Clock, title: 'Availability' },
     { id: 'clients', icon: Users, title: 'Clients' },
     { id: 'services', icon: Scissors, title: 'Services' },
-    { id: 'settings', icon: Settings, title: 'Settings' }
+    { id: 'settings', icon: Settings, title: 'Settings' },
+    { id: 'knowledge', icon: BookOpen, title: 'Knowledge Base' }
   ];
 
   return (

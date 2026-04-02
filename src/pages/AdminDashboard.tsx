@@ -41,6 +41,7 @@ import AvailabilityTab from './admin/tabs/AvailabilityTab';
 import ClientsTab from './admin/tabs/ClientsTab';
 import ServicesTab from './admin/tabs/ServicesTab';
 import SettingsTab from './admin/tabs/SettingsTab';
+import KnowledgeTab from './admin/tabs/KnowledgeTab';
 
 // Data
 import { BARBERS } from '../data/barbers';
@@ -54,7 +55,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 // Services
 import { migrateServicesToFirestore } from '../services/migration';
 
-type AdminView = 'list' | 'calendar' | 'availability' | 'clients' | 'services' | 'settings';
+type AdminView = 'list' | 'calendar' | 'availability' | 'clients' | 'services' | 'settings' | 'knowledge';
 
 const WEEKDAY_ORDER: (keyof WeeklyHours)[] = [
   'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
@@ -471,6 +472,10 @@ export default function AdminDashboard() {
             isSaving={isSavingSettings}
             WEEKDAY_ORDER={WEEKDAY_ORDER}
           />
+        )}
+
+        {activeView === 'knowledge' && (
+          <KnowledgeTab key="knowledge" />
         )}
       </AnimatePresence>
 
