@@ -410,9 +410,10 @@ export default function AdminDashboard() {
       isVagaroSyncing={isVagaroSyncing}
       stats={stats}
     >
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {activeView === 'analytics' && (
           <AnalyticsTab 
+            key="analytics"
             bookings={bookings}
             clients={clients}
             services={services}

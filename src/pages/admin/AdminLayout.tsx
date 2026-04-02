@@ -30,6 +30,17 @@ interface AdminLayoutProps {
   };
 }
 
+const tabs = [
+  { id: 'analytics', icon: BarChart3, title: 'Analytics' },
+  { id: 'list', icon: LayoutList, title: 'Appointments' },
+  { id: 'calendar', icon: CalendarDays, title: 'Calendar' },
+  { id: 'availability', icon: Clock, title: 'Availability' },
+  { id: 'clients', icon: Users, title: 'Clients' },
+  { id: 'services', icon: Scissors, title: 'Services' },
+  { id: 'settings', icon: Settings, title: 'Settings' },
+  { id: 'knowledge', icon: BookOpen, title: 'Knowledge Base' }
+];
+
 const AdminLayout: React.FC<AdminLayoutProps> = ({
   children,
   activeView,
@@ -40,16 +51,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   isVagaroSyncing,
   stats
 }) => {
-  const tabs = [
-    { id: 'analytics', icon: BarChart3, title: 'Analytics' },
-    { id: 'list', icon: LayoutList, title: 'Appointments' },
-    { id: 'calendar', icon: CalendarDays, title: 'Calendar' },
-    { id: 'availability', icon: Clock, title: 'Availability' },
-    { id: 'clients', icon: Users, title: 'Clients' },
-    { id: 'services', icon: Scissors, title: 'Services' },
-    { id: 'settings', icon: Settings, title: 'Settings' },
-    { id: 'knowledge', icon: BookOpen, title: 'Knowledge Base' }
-  ];
 
   return (
     <main className="pt-32 pb-24 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">

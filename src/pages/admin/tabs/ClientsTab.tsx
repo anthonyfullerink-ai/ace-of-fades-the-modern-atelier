@@ -33,16 +33,16 @@ interface ClientsTabProps {
 }
 
 const ClientsTab: React.FC<ClientsTabProps> = ({
-  clients,
-  bookings,
-  services,
-  clientSearch,
+  clients = [],
+  bookings = [],
+  services = [],
+  clientSearch = '',
   setClientSearch,
-  clientStatusFilter,
+  clientStatusFilter = 'All',
   setClientStatusFilter,
-  clientTypeFilter,
+  clientTypeFilter = 'All',
   setClientTypeFilter,
-  clientSortOrder,
+  clientSortOrder = 'newest',
   setClientSortOrder,
   onSuspendClient,
   onDeleteClient
@@ -50,25 +50,28 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
   const filteredClients = useMemo(() => {
-    const filtered = clients.filter(c => {
-      const name = c.displayName || '';
-      const email = c.email || '';
-      const phone = c.phoneNumber || '';
+    if (!clients || !Array.isArray(clients)) return [];
+    
+    const filtered = (clients || []).filter(c => {
+      const name = c?.displayName || '';
+      const email = c?.email || '';
+      const phone = c?.phoneNumber || '';
+      const searchTerm = (clientSearch || '').toLowerCase();
       
       const matchesSearch = 
-        name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        email.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        phone.includes(clientSearch);
+        name.toLowerCase().includes(searchTerm) ||
+        email.toLowerCase().includes(searchTerm) ||
+        phone.includes(clientSearch || '');
       
       const matchesStatus = 
         clientStatusFilter === 'All' ||
-        (clientStatusFilter === 'Suspended' && c.suspended) ||
-        (clientStatusFilter === 'Active' && !c.suspended);
+        (clientStatusFilter === 'Suspended' && c?.suspended) ||
+        (clientStatusFilter === 'Active' && !c?.suspended);
 
       const matchesType =
         clientTypeFilter === 'All' ||
-        (clientTypeFilter === 'Guest' && c.isGuest) ||
-        (clientTypeFilter === 'Registered' && !c.isGuest);
+        (clientTypeFilter === 'Guest' && c?.isGuest) ||
+        (clientTypeFilter === 'Registered' && !c?.isGuest);
 
       return matchesSearch && matchesStatus && matchesType;
     });
@@ -87,12 +90,12 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
   }, [clients, clientSearch, clientStatusFilter, clientTypeFilter, clientSortOrder]);
 
   const getClientRituals = (client: Client) => {
-    return bookings.filter(b => 
-      (b.userId && b.userId === client.uid) || 
-      (b.customerEmail && b.customerEmail.toLowerCase() === client.email.toLowerCase())
+    return (bookings || []).filter(b => 
+      (b?.userId && b.userId === client?.uid) || 
+      (b?.customerEmail && b.customerEmail.toLowerCase() === (client?.email || '').toLowerCase())
     ).sort((a, b) => {
-      const dateA = new Date(`${a.date}T${a.time}`).getTime();
-      const dateB = new Date(`${b.date}T${b.time}`).getTime();
+      const dateA = a && a.date && a.time ? new Date(`${a.date}T${a.time}`).getTime() : 0;
+      const dateB = b && b.date && b.time ? new Date(`${b.date}T${b.time}`).getTime() : 0;
       return dateB - dateA;
     });
   };

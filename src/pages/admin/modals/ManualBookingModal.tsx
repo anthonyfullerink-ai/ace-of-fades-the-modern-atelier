@@ -30,25 +30,25 @@ const ManualBookingModal: React.FC<ManualBookingModalProps> = ({
   onClose, 
   onSuccess, 
   businessSettings,
-  blockedRanges,
-  clients,
-  services
+  blockedRanges = [],
+  clients = [],
+  services = []
 }) => {
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
-    serviceId: services[0]?.id || '', 
+    serviceId: services?.[0]?.id || '', 
     date: new Date().toISOString().split('T')[0], 
     time: '', 
-    barber: BARBERS[0].name,
+    barber: BARBERS?.[0]?.name || '',
     uid: '' 
   });
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showClientList, setShowClientList] = useState(false);
-  const filteredClients = clients.filter(c => 
-    c.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClients = (clients || []).filter(c => 
+    (c?.displayName || '').toLowerCase().includes((searchTerm || '').toLowerCase()) || 
+    (c?.email || '').toLowerCase().includes((searchTerm || '').toLowerCase())
   ).slice(0, 5);
 
   const [submitting, setSubmitting] = useState(false);
