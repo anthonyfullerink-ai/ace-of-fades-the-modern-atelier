@@ -219,7 +219,7 @@ export default function Booking() {
             time: selectedTime,
             status: 'Upcoming',
             barber: selectedBarber.name,
-            specialInstructions: specialInstructions.trim() || undefined
+            ...(specialInstructions.trim() ? { specialInstructions: specialInstructions.trim() } : {})
         });
 
         // Send Email Confirmation (Optional/Best Effort)

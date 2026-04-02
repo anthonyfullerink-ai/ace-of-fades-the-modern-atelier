@@ -141,6 +141,7 @@ export interface Client {
   source?: 'local' | 'vagaro'; // origin of the client record
   externalId?: string; // ID from external system (e.g., Vagaro)
   notes?: string;
+  deleted?: boolean;
 }
 
 export interface Review {
@@ -485,31 +486,46 @@ export const removeBlockedRange = async (rangeId: string) => {
 
 export const getAllClients = async (): Promise<Client[]> => {
   try {
-    // 1. Fetch all user documents (includes both registered and guest docs created by suspend/update)
+    // 1. Fetch all user documents
     const usersSnapshot = await withTimeout(getDocs(usersCollection));
     const clientMap = new Map<string, Client>();
+    const deletedKeys = new Set<string>();
 
-    // Build map from Firestore user docs (these have suspend/noShowCount data)
+    // Build map from Firestore user docs and track deleted identities
     usersSnapshot.docs.forEach(docSnap => {
       const data = docSnap.data() as Client;
-      const key = data.email ? data.email.toLowerCase() : data.uid;
-      clientMap.set(key, { ...data, uid: data.uid || docSnap.id });
+      const docId = docSnap.id;
+      
+      if (data.deleted) {
+        // Track ALL identifiers for deletion to ensure persistence across sources
+        if (data.email) deletedKeys.add(data.email.toLowerCase());
+        if (data.uid) deletedKeys.add(data.uid);
+        deletedKeys.add(docId);
+        if (docId.startsWith('guest-')) {
+          deletedKeys.add(docId.replace('guest-', '').toLowerCase());
+        }
+        return;
+      }
+
+      // Canonical key for the map
+      const key = data.email ? data.email.toLowerCase() : (data.uid || docId);
+      clientMap.set(key, { ...data, uid: data.uid || docId });
     });
 
     // 2. Fetch recent bookings to find guest contacts not yet in user docs
-    const bookingsSnapshot = await withTimeout(getDocs(query(bookingsCollection, orderBy("createdAt", "desc"), limit(200))));
+    const bookingsSnapshot = await withTimeout(getDocs(query(bookingsCollection, orderBy("createdAt", "desc"), limit(500))));
     const allBookings = bookingsSnapshot.docs.map(d => d.data() as Booking);
 
-    // Merge booking contacts — only add if not already present
+    // Merge booking contacts — only add if not already present AND not deleted
     allBookings.forEach(booking => {
       if (booking.customerEmail) {
         const key = booking.customerEmail.toLowerCase();
-        if (!clientMap.has(key)) {
+        if (!clientMap.has(key) && !deletedKeys.has(key)) {
           clientMap.set(key, {
             uid: booking.userId.startsWith('manual-') ? `guest-${key}` : booking.userId,
             displayName: booking.customerName || 'Guest',
             email: booking.customerEmail,
-            createdAt: booking.createdAt,
+            createdAt: booking.createdAt || Date.now(),
             isGuest: true
           });
         }
@@ -552,13 +568,22 @@ export const updateClient = async (uid: string, data: Partial<Client>) => {
   }
 };
 
-export const deleteClient = async (uid: string) => {
+export const deleteClient = async (uid: string, email?: string) => {
   try {
     const userRef = doc(db, 'users', uid);
-    await deleteDoc(userRef);
+    // Determine if we need to store the email for a guest or if one was provided
+    const updateData: any = { deleted: true };
+    
+    if (email) {
+      updateData.email = email.toLowerCase();
+    } else if (uid.startsWith('guest-')) {
+      updateData.email = uid.replace('guest-', '').toLowerCase();
+    }
+    
+    await setDoc(userRef, updateData, { merge: true });
     return true;
   } catch (error) {
-    console.error("Error deleting client:", error);
+    console.error("Error marking client as deleted:", error);
     throw error;
   }
 };

@@ -29,7 +29,7 @@ interface ClientsTabProps {
   clientSortOrder: 'newest' | 'oldest' | 'az' | 'za';
   setClientSortOrder: (val: 'newest' | 'oldest' | 'az' | 'za') => void;
   onSuspendClient: (client: Client, currentlySuspended: boolean) => void;
-  onDeleteClient: (uid: string) => void;
+  onDeleteClient: (uid: string, email?: string) => void;
   onUpdateClient: (uid: string, data: Partial<Client>) => Promise<boolean>;
 }
 
@@ -264,7 +264,7 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
                             {client.suspended ? <ShieldCheck size={18} /> : <ShieldOff size={18} />}
                           </button>
                           <button 
-                            onClick={() => onDeleteClient(client.uid)}
+                            onClick={() => onDeleteClient(client.uid, client.email)}
                             className="p-2 text-red-400 hover:bg-red-500/10 hover:text-red-500 rounded transition-colors"
                             title="Delete Client"
                           >

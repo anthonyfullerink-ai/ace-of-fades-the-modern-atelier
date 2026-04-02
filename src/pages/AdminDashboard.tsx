@@ -262,7 +262,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteClient = (uid: string) => {
+  const handleDeleteClient = (uid: string, email?: string) => {
     setConfirmModal({
       show: true,
       title: 'Delete Client',
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
       isDangerous: true,
       onConfirm: async () => {
         try {
-          await deleteClient(uid);
+          await deleteClient(uid, email);
           toast.success("Client record deleted");
           fetchData();
         } catch (error) {
