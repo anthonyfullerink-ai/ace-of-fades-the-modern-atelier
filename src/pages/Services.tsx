@@ -35,68 +35,87 @@ export default function Services() {
   );
 
   return (
-    <main className="pt-32 pb-24 px-6 max-w-5xl mx-auto min-h-screen">
-      <section className="mb-20">
-        <motion.h1 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="font-headline text-5xl md:text-8xl font-bold tracking-tighter text-primary uppercase"
+    <main className="pt-32 pb-24 px-6 max-w-6xl mx-auto min-h-screen">
+      <section className="mb-24 relative">
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+        <motion.div
+           initial={{ opacity: 0, y: 30 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="relative z-10"
         >
-          SERVICES
-        </motion.h1>
-        <motion.p 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-on-surface-variant font-body mt-4 max-w-lg text-lg"
-        >
-          Curated grooming rituals designed for the modern gentleman. Precision requires preparation.
-        </motion.p>
+          <span className="font-headline text-xs tracking-[0.4em] text-primary uppercase font-bold mb-4 block">Grooming Rituals</span>
+          <h1 className="font-headline text-6xl md:text-9xl font-bold tracking-tighter text-on-surface uppercase leading-[0.8]">
+            THE<br/>MENU
+          </h1>
+          <p className="text-on-surface-variant font-body mt-8 max-w-xl text-lg leading-relaxed">
+            Curated grooming experiences designed for the modern atelier. Every service is a deliberate ritual of precision and style.
+          </p>
+        </motion.div>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {services.map((service, index) => (
           <motion.div
             key={service.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="group relative bg-surface-container p-8 flex flex-col justify-between transition-all duration-500 hover:bg-surface-container-high border-l-4 border-transparent hover:border-primary shadow-lg border border-outline-variant/5"
+            transition={{ delay: index * 0.1 }}
+            className="group relative bg-surface-container/40 backdrop-blur-sm p-10 flex flex-col justify-between transition-all duration-700 hover:bg-surface-container-high border border-outline-variant/10 hover:border-primary/30 shadow-2xl"
           >
-            <span className="absolute right-8 top-4 text-6xl font-headline font-black text-outline-variant/5 pointer-events-none group-hover:opacity-10 transition-opacity">
-              {(index + 1).toString().padStart(2, '0')}
-            </span>
-            <div className="mb-8">
-              <h3 className="font-headline text-2xl font-bold tracking-tight uppercase text-on-surface mb-2">
-                {service.name}
-              </h3>
-              <p className="text-on-surface-variant text-sm leading-relaxed mb-4">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-20 transition-opacity duration-700">
+               <span className="font-headline text-8xl font-black uppercase select-none">{(index + 1).toString().padStart(2, '0')}</span>
+            </div>
+
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="font-headline text-3xl font-bold tracking-tight uppercase text-on-surface">
+                    {service.name}
+                  </h3>
+                  <div className="h-1 w-12 bg-primary mt-2 transition-all duration-500 group-hover:w-24"></div>
+                </div>
+                <span className="font-headline text-2xl text-primary font-bold">{service.price}</span>
+              </div>
+              
+              <p className="text-on-surface-variant text-base leading-relaxed mb-10 max-w-md">
                 {service.desc}
               </p>
-              <div className="flex items-center gap-4 text-[10px] tracking-widest uppercase text-outline">
-                <span>{service.duration} min</span>
-                <span className="w-1 h-1 bg-outline-variant rounded-full"></span>
-                <span className="text-primary font-bold">{service.price}</span>
+
+              <div className="flex items-center gap-6 mb-12">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-outline font-bold mb-1">Duration</span>
+                  <span className="font-headline text-sm uppercase tracking-widest text-on-surface">{service.duration} Minutes</span>
+                </div>
+                <div className="w-px h-8 bg-outline-variant/30"></div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-outline font-bold mb-1">Includes</span>
+                  <span className="font-headline text-sm uppercase tracking-widest text-on-surface">Consultation</span>
+                </div>
               </div>
             </div>
+
             <button 
               onClick={() => handleBook(service.id)}
-              className="border border-outline-variant hover:border-primary text-primary font-headline text-xs tracking-widest py-4 px-6 transition-all duration-300 uppercase w-full bg-surface-container-lowest/50 hover:bg-primary hover:text-on-primary"
+              className="relative overflow-hidden gold-gradient group/btn py-5 px-8 text-on-primary font-headline text-xs font-black tracking-[0.3em] uppercase transition-all duration-500 active:scale-[0.98] shadow-lg"
             >
-              Book Service
+              <span className="relative z-10">Secure Appointment</span>
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500"></div>
             </button>
           </motion.div>
         ))}
       </div>
 
-      <section className="mt-24 p-12 bg-surface-container-high text-center border border-outline-variant/10">
-        <h2 className="font-headline text-3xl font-bold uppercase mb-6">Need a custom package?</h2>
-        <p className="text-on-surface-variant mb-8 max-w-xl mx-auto">
-          We offer tailored grooming experiences for weddings, events, and private sessions. Contact us to discuss your requirements.
+      <section className="mt-32 p-16 bg-surface-container-highest/30 backdrop-blur-md border border-outline-variant/10 text-center relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-1000"></div>
+        <h2 className="font-headline text-4xl font-bold uppercase mb-6 tracking-tight relative z-10">Bespoke Grooming Package?</h2>
+        <p className="text-on-surface-variant mb-10 max-w-2xl mx-auto text-lg leading-relaxed relative z-10">
+          From wedding parties to private executive sessions, we offer tailored experiences beyond the standard menu. Let's craft your ritual.
         </p>
-        <Link to="#" className="text-primary font-headline text-sm tracking-[0.2em] uppercase border-b-2 border-primary pb-1 hover:text-primary-fixed transition-colors">
-          Inquire Now
-        </Link>
+        <div className="relative z-10">
+          <Link to="#" className="inline-block gold-gradient px-12 py-5 text-on-primary font-headline font-bold tracking-widest uppercase hover:brightness-110 transition-all">
+            Inquire Privately
+          </Link>
+        </div>
       </section>
     </main>
   );

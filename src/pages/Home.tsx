@@ -214,17 +214,77 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Lookbook Section */}
+      <section id="lookbook" className="bg-surface py-24 px-6 overflow-hidden">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
+            <div>
+              <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">03</span>
+              <h3 className="font-headline text-4xl md:text-6xl font-bold tracking-tight uppercase">The Lookbook</h3>
+              <p className="text-on-surface-variant font-body mt-4 max-w-md">Precision meets contemporary style. A curated selection of our signature grooming work.</p>
+            </div>
+            <div className="flex gap-4">
+               <div className="h-px w-20 bg-primary/30 mt-auto mb-4 hidden md:block"></div>
+               <span className="font-headline text-xs tracking-[0.3em] uppercase text-primary font-bold">Curated Styles · 2024</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="group relative aspect-[3/4] overflow-hidden bg-surface-container"
+            >
+              <img src="/images/lookbook-1.png" alt="Signature Skin Fade" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8">
+                <p className="font-headline text-xs tracking-widest text-primary uppercase font-bold mb-2">Technique</p>
+                <h4 className="font-headline text-2xl font-bold uppercase text-on-surface">Signature Skin Fade</h4>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="group relative aspect-[3/4] overflow-hidden bg-surface-container md:translate-y-12"
+            >
+              <img src="/images/lookbook-2.png" alt="Modern Beard Sculpting" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8">
+                <p className="font-headline text-xs tracking-widest text-primary uppercase font-bold mb-2">Precision</p>
+                <h4 className="font-headline text-2xl font-bold uppercase text-on-surface">Beard Sculpting</h4>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="group relative aspect-[3/4] overflow-hidden bg-surface-container"
+            >
+              <img src="/images/lookbook-3.png" alt="Classic Scissor Work" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-8">
+                <p className="font-headline text-xs tracking-widest text-primary uppercase font-bold mb-2">Artisan</p>
+                <h4 className="font-headline text-2xl font-bold uppercase text-on-surface">Master Shear Work</h4>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* Reviews Section */}
-      <section id="reviews" className="bg-surface-container-lowest py-24 px-6">
+      <section id="reviews" className="bg-surface-container-lowest py-32 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-end mb-16">
             <div>
-              <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">03</span>
+              <span className="font-headline text-outline-variant text-4xl font-black opacity-20 select-none">04</span>
               <h3 className="font-headline text-4xl font-bold tracking-tight uppercase">Client Voices</h3>
             </div>
             <div className="flex items-center gap-2">
               <StarRating count={5} />
-              <span className="font-headline text-xs tracking-widest text-on-surface-variant uppercase">All 5-Star</span>
+              <span className="font-headline text-xs tracking-widest text-on-surface-variant uppercase">All 5-Star Reviews</span>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -235,15 +295,18 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-surface-container p-8 border-l-2 border-primary/30 hover:border-primary transition-colors duration-300"
+                className="bg-surface-container p-8 border-t-2 border-primary/30 hover:border-primary transition-all duration-500 hover:-translate-y-2 group"
               >
-                <StarRating count={review.rating} />
-                <p className="text-on-surface-variant text-sm leading-relaxed mt-4 mb-6 italic">
-                  "{review.comment}"
+                <div className="mb-6 opacity-40 group-hover:opacity-100 transition-opacity">
+                  <StarRating count={review.rating} />
+                </div>
+                <p className="text-on-surface-variant text-sm leading-relaxed mb-8 italic relative">
+                  <span className="absolute -top-4 -left-2 text-4xl font-serif text-primary/10">"</span>
+                  {review.comment}
                 </p>
-                <div className="flex justify-between items-center border-t border-outline-variant/20 pt-4">
-                  <span className="font-headline font-bold text-sm uppercase text-on-surface">{review.name}</span>
-                  <span className="text-xs text-outline tracking-widest uppercase">{review.date}</span>
+                <div className="flex justify-between items-center border-t border-outline-variant/10 pt-6">
+                  <span className="font-headline font-bold text-xs uppercase tracking-widest text-on-surface">{review.name}</span>
+                  <span className="text-[10px] text-outline tracking-widest uppercase font-bold">{review.date}</span>
                 </div>
               </motion.div>
             ))}
