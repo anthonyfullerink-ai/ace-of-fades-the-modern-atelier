@@ -36,10 +36,23 @@ function StarRating({ count }: { count: number }) {
   );
 }
 
+import { useEffect, useState } from 'react';
+import { getBusinessSettings, BusinessSettings, isShopOpen, getBlockedRanges, DayHours } from '../services/api';
 import { SERVICES } from '../data/services';
 
 export default function Home() {
   const featuredServices = SERVICES.slice(0, 4);
+  const [settings, setSettings] = useState<BusinessSettings | null>(null);
+  const [shopStatus, setShopStatus] = useState<{ isOpen: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    Promise.all([getBusinessSettings(), getBlockedRanges()])
+      .then(([settingsData, rangesData]) => {
+        setSettings(settingsData);
+        setShopStatus(isShopOpen(settingsData, rangesData));
+      })
+      .catch(console.error);
+  }, []);
 
   return (
     <main className="pt-16">
@@ -62,6 +75,20 @@ export default function Home() {
           >
             The Modern Atelier · Est. 2022 · Eatontown, NJ
           </motion.p>
+          
+          {shopStatus && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-3 mb-6"
+            >
+              <span className={`w-2 h-2 rounded-full animate-pulse ${shopStatus.isOpen ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              <span className="font-headline text-[10px] tracking-[0.2em] uppercase font-bold text-on-surface/80">
+                {shopStatus.message}
+              </span>
+            </motion.div>
+          )}
+
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -132,15 +159,24 @@ export default function Home() {
             <div className="space-y-8">
               <h4 className="font-headline text-5xl font-bold tracking-tighter uppercase leading-none">Mo the Barber</h4>
               <p className="text-on-surface-variant text-lg leading-relaxed font-light">
-                Cutting hair since 2009, Mo brings over 15 years of technical mastery to every appointment. Specializing in fades, clipper over comb, hot towel shaves, hair designs, children's haircuts, shear cuts, and beard work — every detail is deliberate.
+                Since 2009, Mesut "MO" Ozelmas has been masterfully blending technique with style. Specializing in fades, clipper over comb, hot towel shaves, hair designs, children's haircuts, shear cuts, beards, and eyebrows — every detail is deliberate.
               </p>
-              <p className="text-on-surface-variant text-sm leading-relaxed italic border-l-2 border-primary pl-4">
-                "I look forward to seeing you!"
-                <span className="block mt-1 not-italic font-headline text-primary text-xs tracking-widest uppercase">— Mesut "MO" Ozelmas</span>
-              </p>
-              <div className="flex items-center gap-4">
-                <Verified className="text-primary" size={24} />
-                <span className="font-headline text-sm tracking-widest uppercase font-bold text-on-surface">Master Craftsman · Est. 2022</span>
+              
+              <div className="space-y-4">
+                <p className="text-on-surface-variant text-sm leading-relaxed italic border-l-2 border-primary pl-4">
+                  "I look forward to seeing you!"
+                  <span className="block mt-1 not-italic font-headline text-primary text-xs tracking-widest uppercase">— Owner, Mesut "MO" Ozelmas</span>
+                </p>
+                
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-4">
+                    <MapPin className="text-primary" size={20} />
+                    <div className="flex flex-col">
+                      <span className="font-headline text-xs tracking-widest uppercase font-bold text-on-surface">Ace of Fades · Est. 2022</span>
+                      <span className="text-on-surface-variant text-sm leading-tight">315 Rt 35 Eatontown NJ Suite 112 <br/> (Inside Haven Salon Studios)</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="text-primary" size={18} />
@@ -226,19 +262,28 @@ export default function Home() {
             </div>
             <div className="bg-surface-container p-10 space-y-6">
               <h5 className="font-headline text-sm tracking-[0.3em] uppercase text-outline mb-8">Business Hours</h5>
-              {[
-                { day: 'Mon / Wed / Fri', hours: '10:00 — 18:00' },
-                { day: 'Thursday', hours: '09:30 — 18:00' },
-                { day: 'Saturday', hours: '09:00 — 15:00' },
-                { day: 'Sun / Tue', hours: 'Closed', highlight: true },
-              ].map((item) => (
-                <div key={item.day} className="flex justify-between border-b border-outline-variant/20 pb-3">
-                  <span className="text-on-surface-variant uppercase text-sm">{item.day}</span>
-                  <span className={`font-headline font-bold text-sm uppercase ${item.highlight ? 'text-primary' : 'text-on-surface'}`}>
-                    {item.hours}
-                  </span>
+              
+              {settings ? (
+                Object.entries(settings.weeklyHours).map(([day, hoursData]) => {
+                  const hours = hoursData as DayHours;
+                  return (
+                    <div key={day} className="flex justify-between border-b border-outline-variant/20 pb-3">
+                      <span className="text-on-surface-variant uppercase text-sm">{day}</span>
+                      <span className={`font-headline font-bold text-sm uppercase ${hours.closed ? 'text-primary opacity-50' : 'text-on-surface'}`}>
+                        {hours.closed ? 'Closed' : `${hours.open} — ${hours.close}`}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="space-y-6">
+                  {/* Fallback skeleton or default view if needed */}
+                  <div className="h-4 bg-outline-variant/10 animate-pulse w-full"></div>
+                  <div className="h-4 bg-outline-variant/10 animate-pulse w-full"></div>
+                  <div className="h-4 bg-outline-variant/10 animate-pulse w-full"></div>
                 </div>
-              ))}
+              )}
+
               <div className="pt-4 space-y-2">
                 <p className="text-xs text-outline uppercase tracking-widest font-headline">Important Notice</p>
                 <p className="text-on-surface-variant text-xs leading-relaxed">

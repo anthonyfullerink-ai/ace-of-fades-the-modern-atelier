@@ -22,28 +22,45 @@ import {
   Ban,
   ArrowUpDown,
   Scissors,
-  X
+  X,
+  Settings,
+  Plus
 } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { 
   getAllBookings, 
+  getBookingsByDate, 
   updateBookingStatus, 
+  deleteBooking, 
+  getAllClients, 
+  updateClient, 
+  deleteClient, 
+  suspendClient, 
+  Client, 
+  getBusinessSettings, 
+  updateBusinessSettings, 
+  BusinessSettings, 
   Booking, 
-  getBlockedSlots, 
-  addBlockedSlot, 
-  removeBlockedSlot, 
+  WeeklyHours, 
+  DayHours, 
+  SpecialHours, 
+  getShopHoursForDate, 
+  generateTimeSlots, 
+  createBooking,
+  isSlotAvailableForService,
+  getBlockedSlots,
+  timeToMinutes,
+  BlockedRange,
   BlockedSlot,
+  addBlockedSlot,
+  removeBlockedSlot,
   getBlockedRanges,
   addBlockedRange,
   removeBlockedRange,
-  BlockedRange,
-  createBooking,
-  getAllClients,
-  updateClient,
-  deleteClient,
-  deleteBooking,
-  suspendClient,
-  Client
+  WEEKDAY_ORDER,
+  formatTimeStr
 } from '../services/api';
+
 import { SERVICES } from '../data/services';
 import { BARBERS } from '../data/barbers';
 import toast from 'react-hot-toast';
@@ -57,7 +74,7 @@ export default function AdminDashboard() {
   const [serviceFilter, setServiceFilter] = useState<string>('All');
   const [barberFilter, setBarberFilter] = useState<string>('All');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
-  const [view, setView] = useState<'list' | 'calendar' | 'availability' | 'clients'>('list');
+  const [view, setView] = useState<'list' | 'calendar' | 'availability' | 'clients' | 'settings'>('list');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   // Availability State
@@ -67,6 +84,13 @@ export default function AdminDashboard() {
   const [showManualBooking, setShowManualBooking] = useState(false);
   const [isBlockingRange, setIsBlockingRange] = useState(false);
   const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDangerous?: boolean;
+  }>({ show: false, title: '', message: '', onConfirm: () => {} });
 
   // Clients State
   const [clients, setClients] = useState<Client[]>([]);
@@ -76,6 +100,15 @@ export default function AdminDashboard() {
   const [clientSortOrder, setClientSortOrder] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isEditingClient, setIsEditingClient] = useState(false);
+  
+  // Business Settings State
+  const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [newSpecialDate, setNewSpecialDate] = useState('');
+  const [newSpecialOpen, setNewSpecialOpen] = useState('09:00');
+  const [newSpecialClose, setNewSpecialClose] = useState('18:00');
+  const [newSpecialClosed, setNewSpecialClosed] = useState(false);
+  const [newSpecialReason, setNewSpecialReason] = useState('');
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -94,7 +127,16 @@ export default function AdminDashboard() {
       const data = await getBlockedRanges();
       setBlockedRanges(data);
     } catch (error) {
-      console.error("Failed to load blocked ranges");
+      console.error("Error fetching ranges:", error);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const data = await getBusinessSettings();
+      setBusinessSettings(data);
+    } catch (error) {
+      toast.error("Failed to load business settings");
     }
   };
 
@@ -110,8 +152,99 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchBookings();
     fetchBlockedRanges();
+    fetchSettings();
     fetchClients();
   }, []);
+
+  const handleUpdateWeeklyHours = async (day: keyof WeeklyHours, field: keyof DayHours, value: any) => {
+    if (!businessSettings) return;
+    
+    const updatedSettings = {
+      ...businessSettings,
+      weeklyHours: {
+        ...businessSettings.weeklyHours,
+        [day]: {
+          ...businessSettings.weeklyHours[day],
+          [field]: value
+        }
+      }
+    };
+    
+    setBusinessSettings(updatedSettings);
+    try {
+      await updateBusinessSettings(updatedSettings);
+      toast.success(`${day.charAt(0).toUpperCase() + day.slice(1)} hours updated`);
+    } catch (error) {
+      toast.error("Failed to update hours");
+    }
+  };
+
+  const handleAddSpecialHours = async () => {
+    if (!businessSettings || !newSpecialDate) return;
+    
+    const newSpecial: SpecialHours = {
+      id: Date.now().toString(),
+      date: newSpecialDate,
+      open: newSpecialOpen,
+      close: newSpecialClose,
+      closed: newSpecialClosed,
+      reason: newSpecialReason
+    };
+    
+    const updatedSettings = {
+      ...businessSettings,
+      specialHours: [...(businessSettings.specialHours || []), newSpecial]
+    };
+    
+    setIsSavingSettings(true);
+    try {
+      await updateBusinessSettings(updatedSettings);
+      setBusinessSettings(updatedSettings);
+      setNewSpecialDate('');
+      setNewSpecialReason('');
+      toast.success("Special hours added");
+    } catch (error) {
+      toast.error("Failed to add special hours");
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleRemoveSpecialHours = async (id: string) => {
+    if (!businessSettings) return;
+    
+    const updatedSettings = {
+      ...businessSettings,
+      specialHours: businessSettings.specialHours?.filter(s => s.id !== id) || []
+    };
+    
+    try {
+      await updateBusinessSettings(updatedSettings);
+      setBusinessSettings(updatedSettings);
+      toast.success("Special hours removed");
+    } catch (error) {
+      toast.error("Failed to remove special hours");
+    }
+  };
+
+  const handleDeleteBlockedRange = async (id: string) => {
+    setConfirmModal({
+      show: true,
+      title: 'Delete Shop Closure',
+      message: 'Are you sure you want to remove this shop closure? This will reopen the dates for booking.',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          await removeBlockedRange(id);
+          setBlockedRanges(prev => prev.filter(r => r.id !== id));
+          toast.success("Closure removed");
+        } catch (error) {
+          toast.error("Failed to remove closure");
+        }
+        setConfirmModal(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
 
   const fetchBlocked = async (date: string) => {
     setIsManaging(true);
@@ -167,22 +300,14 @@ export default function AdminDashboard() {
   };
 
   const adminTimeSlots = useMemo(() => {
-    const slots = [];
-    let current = new Date();
-    current.setHours(9, 0, 0, 0);
-    const end = new Date();
-    end.setHours(18, 0, 0, 0);
+    if (!businessSettings) return [];
+    
+    const hours = getShopHoursForDate(businessSettings, availabilityDate, blockedRanges);
+    if (hours.closed) return [];
+    
+    return generateTimeSlots(hours.open, hours.close);
+  }, [availabilityDate, businessSettings, blockedRanges]);
 
-    while (current < end) {
-      slots.push(current.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      }));
-      current.setMinutes(current.getMinutes() + 15);
-    }
-    return slots;
-  }, []);
 
   const handleStatusUpdate = async (id: string, status: Booking['status']) => {
     try {
@@ -201,25 +326,43 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteBooking = async (id: string) => {
-    try {
-      await deleteBooking(id);
-      toast.success("Record deleted");
-      fetchBookings();
-    } catch (error) {
-      console.error('Delete booking error:', error);
-      toast.error("Failed to delete record");
-    }
+    setConfirmModal({
+      show: true,
+      title: 'Delete Appointment',
+      message: 'Are you sure you want to permanently delete this appointment record? This action cannot be undone.',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          await deleteBooking(id);
+          toast.success("Appointment record deleted");
+          fetchBookings();
+        } catch (error) {
+          toast.error("Failed to delete record");
+        } finally {
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        }
+      }
+    });
   };
 
   const handleDeleteClient = async (uid: string) => {
-    try {
-      await deleteClient(uid);
-      toast.success("Client deleted");
-      fetchClients();
-    } catch (error) {
-      console.error('Delete client error:', error);
-      toast.error("Failed to delete client");
-    }
+    setConfirmModal({
+      show: true,
+      title: 'Delete Client',
+      message: 'Are you sure you want to permanently delete this client? This will remove all their data and cannot be undone.',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          await deleteClient(uid);
+          toast.success("Client deleted successfully");
+          fetchClients();
+        } catch (error) {
+          toast.error("Failed to delete client");
+        } finally {
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        }
+      }
+    });
   };
 
   const handleSuspendClient = async (client: Client, currentlySuspended: boolean) => {
@@ -395,57 +538,57 @@ export default function AdminDashboard() {
   }, [bookings]);
 
   return (
-    <main className="pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+    <main className="pt-32 pb-24 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-16">
         <div>
-          <h1 className="font-headline text-4xl md:text-6xl font-bold tracking-tighter text-primary uppercase">
+          <h1 className="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-primary uppercase leading-none mb-3">
             Admin Portal
           </h1>
-          <p className="text-on-surface-variant font-body">Manage appointments and shop operations.</p>
+          <div className="flex items-center gap-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            <p className="text-on-surface-variant font-headline uppercase text-[10px] tracking-[0.2em] font-bold">Studio Operations Center</p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-surface-container p-1 border border-outline-variant/20 rounded-none">
-            <button
-              onClick={() => setView('list')}
-              className={`p-2 transition-all ${view === 'list' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'}`}
-              title="List View"
+        
+        <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
+          {/* Main Navigation Tab Switcher */}
+          <div className="flex bg-surface-container-lowest p-1.5 border border-outline-variant/10 shadow-2xl rounded-none w-full md:w-auto justify-between md:justify-start">
+            {[
+              { id: 'list', icon: LayoutList, title: 'Appointments' },
+              { id: 'calendar', icon: CalendarDays, title: 'Calendar' },
+              { id: 'availability', icon: Clock, title: 'Availability' },
+              { id: 'clients', icon: Users, title: 'Clients' },
+              { id: 'settings', icon: Settings, title: 'Settings' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setView(tab.id as any)}
+                className={`p-3 transition-all relative group ${view === tab.id ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                title={tab.title}
+              >
+                <tab.icon size={20} strokeWidth={view === tab.id ? 2.5 : 2} />
+                {view === tab.id && (
+                  <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_#f2ca50]" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-3 w-full md:w-auto">
+            <button 
+              onClick={() => setShowManualBooking(true)}
+              className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 gold-gradient text-on-primary font-headline uppercase text-[11px] font-bold tracking-[0.2em] hover:brightness-110 active:scale-[0.98] transition-all shadow-xl"
             >
-              <LayoutList size={20} />
+              <Plus size={16} /> Add Booking
             </button>
-            <button
-              onClick={() => setView('calendar')}
-              className={`p-2 transition-all ${view === 'calendar' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'}`}
-              title="Calendar View"
+            <button 
+              onClick={fetchBookings}
+              className="md:flex-none flex items-center justify-center p-4 border border-outline-variant/20 text-on-surface-variant hover:text-primary hover:border-primary transition-all bg-surface-container/30"
+              title="Sync Data"
             >
-              <CalendarDays size={20} />
-            </button>
-            <button
-              onClick={() => setView('availability')}
-              className={`p-2 transition-all ${view === 'availability' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'}`}
-              title="Availability Management"
-            >
-              <Clock size={20} />
-            </button>
-            <button
-              onClick={() => setView('clients')}
-              className={`p-2 transition-all ${view === 'clients' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'}`}
-              title="Client Management"
-            >
-              <Users size={20} />
+              <ArrowUpDown size={18} />
             </button>
           </div>
-          <button 
-            onClick={() => setShowManualBooking(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-headline uppercase text-xs tracking-widest hover:bg-primary/90 transition-all shadow-lg"
-          >
-            Add Appointment
-          </button>
-          <button 
-            onClick={fetchBookings}
-            className="flex items-center gap-2 px-6 py-3 border border-outline text-on-surface font-headline uppercase text-xs tracking-widest hover:bg-surface-container transition-all"
-          >
-            Refresh
-          </button>
         </div>
       </div>
 
@@ -712,6 +855,16 @@ export default function AdminDashboard() {
                   <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   <p className="font-headline uppercase tracking-widest text-sm">Loading Slots...</p>
                 </div>
+              ) : adminTimeSlots.length === 0 ? (
+                <div className="py-20 text-center flex flex-col items-center gap-6 border-2 border-dashed border-outline-variant/10 bg-surface-container-highest/20">
+                  <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center">
+                    <Ban size={32} className="text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-headline text-2xl font-bold uppercase tracking-tight text-red-500 mb-2">Shop Closed</h3>
+                    <p className="text-on-surface-variant font-body text-sm max-w-sm mx-auto">This date is currently marked as closed in your business settings or by a special closure.</p>
+                  </div>
+                </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   {adminTimeSlots.map((time) => {
@@ -733,6 +886,7 @@ export default function AdminDashboard() {
                   })}
                 </div>
               )}
+
               
               <div className="mt-12 pt-12 border-t border-outline-variant/10">
                 <div className="flex justify-between items-center mb-8">
@@ -745,11 +899,26 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-6">
                         <Calendar size={20} className="text-primary/60" />
                         <div>
-                          <div className="font-headline text-sm font-bold uppercase">{new Date(range.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(range.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                          <div className="font-headline text-sm font-bold uppercase">{new Date(range.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(range.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                           <div className="text-[10px] text-on-surface-variant tracking-wider opacity-60 italic">{range.reason || 'No reason provided'}</div>
                         </div>
                       </div>
-                      <button onClick={async () => { if (window.confirm("Remove this closure?")) { await removeBlockedRange(range.id!); fetchBlockedRanges(); } }} className="p-2 text-red-500 hover:bg-red-500/10 rounded"><XSquare size={18} /></button>
+                      <button 
+                        onClick={() => setConfirmModal({
+                          show: true,
+                          title: 'Remove Closure',
+                          message: 'Are you sure you want to re-open the shop for this date range?',
+                          onConfirm: async () => {
+                            await removeBlockedRange(range.id!);
+                            fetchBlockedRanges();
+                            setConfirmModal(prev => ({ ...prev, show: false }));
+                          }
+                        })} 
+                        className="p-2 text-red-500 hover:bg-red-500/10 rounded"
+                        title="Delete Closure"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -899,72 +1068,459 @@ export default function AdminDashboard() {
             </div>
           </motion.div>
         )}
+
+        {view === 'settings' && (
+          <motion.div
+            key="settings"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="space-y-12 pb-24"
+          >
+            {/* Weekly Hours Section */}
+            <div className="bg-surface-container-low/50 p-6 md:p-10 border border-outline-variant/10 shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-primary/30 group-hover:bg-primary transition-colors"></div>
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-12 h-12 flex items-center justify-center bg-primary/10 border border-primary/20">
+                  <Clock className="text-primary" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-headline text-3xl font-bold uppercase tracking-tight">Standard Weekly Hours</h3>
+                  <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.2em] font-bold">Base schedule for the studio</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {businessSettings && WEEKDAY_ORDER.map((day) => {
+                  const hours = businessSettings.weeklyHours[day];
+                  return (
+                    <div key={day} className="flex flex-col p-6 bg-surface-container border border-outline-variant/10 transition-all hover:border-primary/30 group/card relative">
+                      <div className="flex justify-between items-start mb-6">
+                        <span className="font-headline font-bold uppercase text-sm tracking-widest text-on-surface">{day}</span>
+                        <div className={`px-2 py-0.5 text-[8px] uppercase font-black tracking-[0.2em] ${hours.closed ? 'text-red-500 bg-red-500/10' : 'text-green-500 bg-green-500/10'}`}>
+                          {hours.closed ? 'Closed' : 'Active'}
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 flex flex-col gap-4 mb-8">
+                        {hours.closed ? (
+                          <div className="flex items-center justify-center h-[72px] border border-dashed border-outline-variant/20 bg-surface-container-lowest/30">
+                            <span className="text-[10px] uppercase text-on-surface-variant font-bold tracking-widest opacity-50">No Slots Available</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between group/input">
+                              <span className="text-[9px] uppercase text-outline-variant font-bold tracking-widest">Opening</span>
+                              <input 
+                                type="time" 
+                                value={hours.open}
+                                onChange={(e) => handleUpdateWeeklyHours(day as keyof WeeklyHours, 'open', e.target.value)}
+                                className="bg-surface-container-lowest border border-outline-variant/20 p-2 text-xs font-headline focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all w-28 text-center"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between group/input">
+                              <span className="text-[9px] uppercase text-outline-variant font-bold tracking-widest">Closing</span>
+                              <input 
+                                type="time" 
+                                value={hours.close}
+                                onChange={(e) => handleUpdateWeeklyHours(day as keyof WeeklyHours, 'close', e.target.value)}
+                                className="bg-surface-container-lowest border border-outline-variant/20 p-2 text-xs font-headline focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all w-28 text-center"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <button
+                        onClick={() => handleUpdateWeeklyHours(day as keyof WeeklyHours, 'closed', !hours.closed)}
+                        className={`w-full py-3 font-headline font-bold uppercase text-[10px] tracking-[0.2em] border transition-all ${
+                          hours.closed 
+                            ? 'bg-primary/5 border-primary/20 text-primary hover:bg-primary/10' 
+                            : 'bg-surface-container-lowest border-outline-variant/30 text-on-surface-variant hover:text-red-500 hover:border-red-500/50'
+                        }`}
+                      >
+                        {hours.closed ? 'Set as Open' : 'Mark as Closed'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Special Hours / Date Overrides */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              <div className="bg-surface-container-low/50 p-6 md:p-10 border border-outline-variant/10 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-primary/30 group-hover:bg-primary transition-colors"></div>
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 flex items-center justify-center bg-primary/10 border border-primary/20">
+                    <Calendar className="text-primary" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-headline text-2xl font-bold uppercase tracking-tight">Special Date Hours</h3>
+                    <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.2em] font-bold">Holidays and Event overrides</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-6 mb-10 p-6 bg-surface-container border border-outline-variant/10">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="col-span-2">
+                       <label className="block text-[10px] uppercase text-outline-variant mb-2 font-bold tracking-widest">Date</label>
+                      <input 
+                        type="date" 
+                        value={newSpecialDate}
+                        onChange={(e) => setNewSpecialDate(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 text-sm font-headline focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-outline-variant mb-2 font-bold tracking-widest">Open</label>
+                      <input 
+                        type="time" 
+                        disabled={newSpecialClosed}
+                        value={newSpecialOpen}
+                        onChange={(e) => setNewSpecialOpen(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 text-sm font-headline focus:border-primary outline-none disabled:opacity-20 transition-all text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase text-outline-variant mb-2 font-bold tracking-widest">Close</label>
+                      <input 
+                        type="time" 
+                        disabled={newSpecialClosed}
+                        value={newSpecialClose}
+                        onChange={(e) => setNewSpecialClose(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 text-sm font-headline focus:border-primary outline-none disabled:opacity-20 transition-all text-center"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-[10px] uppercase text-outline-variant mb-2 font-bold tracking-widest">Reason / Event Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Christmas Eve, Training..."
+                        value={newSpecialReason}
+                        onChange={(e) => setNewSpecialReason(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 text-sm font-headline focus:border-primary outline-none placeholder:text-on-surface-variant/30"
+                      />
+                    </div>
+                    <div className="col-span-2 flex items-center gap-4 py-2 border-y border-outline-variant/5">
+                      <div className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center transition-colors">
+                        <input 
+                          type="checkbox" 
+                          id="specialClosed"
+                          checked={newSpecialClosed}
+                          onChange={(e) => setNewSpecialClosed(e.target.checked)}
+                          className="peer sr-only"
+                        />
+                        <label 
+                          htmlFor="specialClosed"
+                          className="block h-5 w-10 rounded-full bg-outline-variant/30 peer-checked:bg-primary transition-colors cursor-pointer after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-5"
+                        />
+                      </div>
+                      <label htmlFor="specialClosed" className="text-[11px] font-headline uppercase tracking-[0.2em] font-bold cursor-pointer text-on-surface-variant select-none">Fully Closed on this date</label>
+                    </div>
+                    <button
+                      onClick={handleAddSpecialHours}
+                      disabled={!newSpecialDate || isSavingSettings}
+                      className="col-span-2 gold-gradient py-5 font-headline font-bold uppercase tracking-[0.3em] text-[10px] active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale shadow-lg hover:brightness-110"
+                    >
+                      {isSavingSettings ? 'Saving...' : 'Add Special Hours'}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <p className="text-[10px] uppercase font-black tracking-[0.2em] text-on-surface/50 px-2">Active Overrides</p>
+                  {businessSettings?.specialHours?.map((special) => (
+                    <div key={special.id} className="flex justify-between items-center p-5 bg-surface-container border border-outline-variant/10 hover:border-primary/20 transition-all group/item shadow-sm">
+                      <div className="flex items-center gap-6">
+                        <div className="flex flex-col items-center justify-center w-14 py-2 bg-surface-container-lowest border border-outline-variant/10">
+                          <span className="text-[9px] font-black uppercase text-primary leading-none">
+                            {new Date(special.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' })}
+                          </span>
+                          <span className="text-xl font-headline font-bold text-on-surface">
+                            {new Date(special.date + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric' })}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-headline font-bold uppercase text-xs tracking-widest text-on-surface">
+                            {special.reason || 'Special Hours'}
+                          </div>
+                          <div className="text-[9px] text-on-surface-variant uppercase tracking-[0.2em] font-medium mt-1.5 flex items-center gap-2">
+                             {special.closed ? (
+                               <span className="text-red-500 font-bold">STUDIO CLOSED</span>
+                             ) : (
+                               <>
+                                 <span className="px-1.5 py-0.5 bg-surface-container-highest/50 border border-outline-variant/10">{formatTimeStr(special.open)}</span>
+                                 <span className="opacity-30">—</span>
+                                 <span className="px-1.5 py-0.5 bg-surface-container-highest/50 border border-outline-variant/10">{formatTimeStr(special.close)}</span>
+                               </>
+                             )}
+                          </div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleRemoveSpecialHours(special.id!)}
+                        className="p-3 text-on-surface-variant hover:text-red-500 hover:bg-red-500/5 transition-all opacity-0 group-hover/item:opacity-100"
+                        title="Remove Override"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {(!businessSettings?.specialHours || businessSettings.specialHours.length === 0) && (
+                    <div className="text-center py-12 bg-surface-container/30 border border-dashed border-outline-variant/20">
+                      <p className="text-[10px] uppercase text-on-surface-variant/40 tracking-[0.3em] font-bold italic">
+                        No overrides configured
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-surface-container-low/50 p-6 md:p-10 border border-outline-variant/10 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-red-500/30 group-hover:bg-red-500 transition-colors"></div>
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-500">
+                    <ShieldOff size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-headline text-2xl font-bold uppercase tracking-tight">Full Studio Closures</h3>
+                    <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.2em] font-bold text-red-500/70">Extended Shutdowns</p>
+                  </div>
+                </div>
+                
+                <p className="text-on-surface-variant text-[11px] mb-8 leading-relaxed font-medium uppercase tracking-wider opacity-70">
+                  These represent total studio shutdowns managed via the <span className="text-on-surface font-bold">Availability</span> tab, typically for maintenance or vacations.
+                </p>
+
+                <div className="space-y-4">
+                  {blockedRanges.map((range) => (
+                    <div key={range.id} className="p-5 bg-surface-container border border-outline-variant/10 border-l-2 border-red-500/50 flex justify-between items-center group/range hover:border-red-500/30 transition-all">
+                      <div>
+                        <div className="font-headline font-bold uppercase text-[10px] tracking-[0.2em] text-on-surface">
+                           {new Date(range.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                           <span className="mx-3 opacity-20">—</span>
+                           {new Date(range.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                        {range.reason && <div className="text-[9px] text-red-500/70 uppercase tracking-[0.2em] font-bold mt-2">{range.reason}</div>}
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteBlockedRange(range.id!)}
+                        className="p-3 text-on-surface-variant hover:text-red-500 hover:bg-red-500/5 transition-all opacity-0 group-hover/range:opacity-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {blockedRanges.length === 0 && (
+                    <div className="text-center py-12 bg-surface-container/30 border border-dashed border-outline-variant/20 italic">
+                      <p className="text-[10px] uppercase text-on-surface-variant/40 tracking-[0.3em] font-bold">No active closures</p>
+                    </div>
+                  )}
+                </div>
+                
+                <button 
+                  onClick={() => setIsBlockingRange(true)}
+                  className="w-full mt-8 py-5 border border-outline-variant/20 border-dashed text-on-surface-variant font-headline uppercase font-bold text-[10px] tracking-[0.3em] hover:text-red-500 hover:border-red-500/30 transition-all bg-surface-container-highest/10"
+                >
+                  <Plus size={14} className="inline mr-2" /> Add Extended Closure
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
-      {showManualBooking && <ManualBookingModal onClose={() => setShowManualBooking(false)} onSuccess={() => { fetchBookings(); setShowManualBooking(false); }} timeSlots={adminTimeSlots} />}
+      {showManualBooking && businessSettings && (
+        <ManualBookingModal 
+          onClose={() => setShowManualBooking(false)} 
+          onSuccess={() => { fetchBookings(); setShowManualBooking(false); }} 
+          businessSettings={businessSettings}
+          blockedRanges={blockedRanges}
+        />
+      )}
+
       {isBlockingRange && <RangeBlockingModal onClose={() => setIsBlockingRange(false)} onSuccess={() => { fetchBlockedRanges(); setIsBlockingRange(false); }} />}
       {isEditingClient && selectedClient && <EditClientModal client={selectedClient} onClose={() => { setIsEditingClient(false); setSelectedClient(null); }} onSuccess={() => { fetchClients(); setIsEditingClient(false); setSelectedClient(null); }} />}
+      <ConfirmationModal 
+        show={confirmModal.show}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        isDangerous={confirmModal.isDangerous}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+      />
     </main>
   );
 }
 
-function ManualBookingModal({ onClose, onSuccess, timeSlots }: { onClose: () => void, onSuccess: () => void, timeSlots: string[] }) {
-  const [formData, setFormData] = useState({ name: '', email: '', serviceId: SERVICES[0].id, date: new Date().toISOString().split('T')[0], time: timeSlots[0], barber: BARBERS[0].name });
+function ManualBookingModal({ 
+  onClose, 
+  onSuccess, 
+  businessSettings,
+  blockedRanges
+}: { 
+  onClose: () => void, 
+  onSuccess: () => void, 
+  businessSettings: BusinessSettings,
+  blockedRanges: BlockedRange[]
+}) {
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    email: '', 
+    serviceId: SERVICES[0].id, 
+    date: new Date().toISOString().split('T')[0], 
+    time: '', 
+    barber: BARBERS[0].name 
+  });
   const [submitting, setSubmitting] = useState(false);
+
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  useEffect(() => {
+    const fetchRealAvailability = async () => {
+      setLoadingSlots(true);
+      try {
+        const hours = getShopHoursForDate(businessSettings, formData.date, blockedRanges);
+        if (hours.closed) {
+          setAvailableSlots([]);
+          return;
+        }
+
+        const [dayBookings, blockedSlots] = await Promise.all([
+          getBookingsByDate(formData.date),
+          getBlockedSlots(formData.date)
+        ]);
+
+        const allPossibleSlots = generateTimeSlots(hours.open, hours.close);
+        const service = SERVICES.find(s => s.id === formData.serviceId);
+        const duration = service?.duration || 30;
+
+        const filtered = allPossibleSlots.filter(slot => 
+          isSlotAvailableForService(slot, duration, hours, dayBookings, blockedSlots)
+        );
+
+        setAvailableSlots(filtered);
+      } catch (error) {
+        console.error("Failed to fetch custom availability", error);
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchRealAvailability();
+  }, [formData.date, formData.serviceId, businessSettings, blockedRanges]);
+
+  // Set default time when slots change
+  useEffect(() => {
+    if (availableSlots.length > 0 && (!formData.time || !availableSlots.includes(formData.time))) {
+      setFormData(prev => ({ ...prev, time: availableSlots[0] }));
+    } else if (availableSlots.length === 0) {
+      setFormData(prev => ({ ...prev, time: '' }));
+    }
+  }, [availableSlots]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (availableSlots.length === 0) {
+      toast.error("Shop is closed on the selected date");
+      return;
+    }
     setSubmitting(true);
     try {
-      await createBooking({ userId: `manual-entry-${Date.now()}`, customerName: formData.name, customerEmail: formData.email, serviceId: formData.serviceId, date: formData.date, time: formData.time, status: 'Upcoming', barber: formData.barber });
+      await createBooking({ 
+        userId: `manual-entry-${Date.now()}`, 
+        customerName: formData.name, 
+        customerEmail: formData.email, 
+        serviceId: formData.serviceId, 
+        date: formData.date, 
+        time: formData.time, 
+        status: 'Upcoming', 
+        barber: formData.barber 
+      });
       toast.success("Booking created");
       onSuccess();
-    } catch (error) { toast.error("Failed to create booking"); } finally { setSubmitting(false); }
+    } catch (error) { 
+      toast.error("Failed to create booking"); 
+    } finally { 
+      setSubmitting(false); 
+    }
   };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-surface/80 backdrop-blur-md">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-xl bg-surface-container p-8 border border-outline-variant/20 shadow-2xl">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="font-headline text-2xl font-bold uppercase tracking-widest">Manual Appointment</h2>
-          <button onClick={onClose} className="p-2 hover:bg-surface-container-highest"><XSquare size={24} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-stone-950/80 backdrop-blur-xl">
+      <motion.div initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-2xl bg-surface-container border border-outline-variant/10 shadow-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+        <div className="bg-surface-container-highest/20 p-8 border-b border-outline-variant/10 flex justify-between items-center">
+          <div>
+            <h2 className="font-headline text-3xl font-bold uppercase tracking-tight text-on-surface">Direct Booking</h2>
+            <p className="text-[10px] text-primary uppercase tracking-[0.3em] font-bold mt-1">Manual Entry Subsystem</p>
+          </div>
+          <button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:text-primary transition-all rounded-none"><X size={20} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Customer Name</label>
-              <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" />
+        
+        <form onSubmit={handleSubmit} className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Customer Identity</label>
+              <input required type="text" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all" />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Email Address (Optional)</label>
-              <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Service</label>
-              <select value={formData.serviceId} onChange={e => setFormData({...formData, serviceId: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none">
-                {SERVICES.map(s => <option key={s.id} value={s.id}>{s.name} - {s.price}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Barber</label>
-              <select value={formData.barber} onChange={e => setFormData({...formData, barber: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none">
-                {BARBERS.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-              </select>
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Email Address</label>
+              <input type="email" placeholder="client@example.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all" />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Date</label>
-              <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Technical Service</label>
+              <select value={formData.serviceId} onChange={e => setFormData({...formData, serviceId: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary outline-none appearance-none cursor-pointer">
+                {SERVICES.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()} — {s.price}</option>)}
+              </select>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Time</label>
-              <select value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none">
-                {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+             <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Artist / Barber</label>
+              <select value={formData.barber} onChange={e => setFormData({...formData, barber: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary outline-none appearance-none cursor-pointer">
+                {BARBERS.map(b => <option key={b.id} value={b.name}>{b.name.toUpperCase()}</option>)}
               </select>
             </div>
           </div>
-          <div className="pt-6"><button disabled={submitting} className="w-full bg-primary text-on-primary p-6 font-headline uppercase font-bold tracking-[0.2em] shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50">{submitting ? 'Creating...' : 'Confirm Appointment'}</button></div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-outline-variant/5">
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Appointment Date</label>
+              <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary outline-none transition-all" />
+            </div>
+            <div className="space-y-3 relative">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Requested Time</label>
+              {loadingSlots ? (
+                <div className="w-full p-5 bg-surface-container-lowest border border-outline-variant/20 text-[10px] uppercase font-bold tracking-widest animate-pulse">Scanning Availability...</div>
+              ) : (
+                <select 
+                  disabled={availableSlots.length === 0}
+                  value={formData.time} 
+                  onChange={e => setFormData({...formData, time: e.target.value})} 
+                  className={`w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary outline-none transition-all ${availableSlots.length === 0 ? 'opacity-20 cursor-not-allowed italic' : ''}`}
+                >
+                  {availableSlots.length > 0 ? (
+                    availableSlots.map(t => <option key={t} value={t}>{formatTimeStr(t)}</option>)
+                  ) : (
+                    <option value="">Studio Closed</option>
+                  )}
+                </select>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-8">
+            <button 
+              disabled={submitting || availableSlots.length === 0} 
+              className="w-full gold-gradient py-6 font-headline font-black uppercase text-[11px] tracking-[0.4em] shadow-2xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale"
+            >
+              {submitting ? 'PROCESSING...' : availableSlots.length === 0 ? 'NOT AVAILABLE' : 'SECURE APPOINTMENT'}
+            </button>
+          </div>
         </form>
       </motion.div>
     </div>
@@ -981,28 +1537,36 @@ function RangeBlockingModal({ onClose, onSuccess }: { onClose: () => void, onSuc
     try { await addBlockedRange(data); toast.success("Range blocked"); onSuccess(); } catch (error) { toast.error("Failed to block range"); } finally { setSubmitting(false); }
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-surface/80 backdrop-blur-md">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg bg-surface-container p-8 border border-outline-variant/20 shadow-2xl">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="font-headline text-2xl font-bold uppercase tracking-widest">Shop Closure</h2>
-          <button onClick={onClose} className="p-2 hover:bg-surface-container-highest"><XSquare size={24} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-stone-950/80 backdrop-blur-xl">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-xl bg-surface-container border border-outline-variant/10 shadow-3xl overflow-hidden">
+         <div className="bg-red-500/10 p-8 border-b border-outline-variant/10 flex justify-between items-center">
+          <div>
+            <h2 className="font-headline text-3xl font-bold uppercase tracking-tight text-red-500/90">Block Schedule</h2>
+            <p className="text-[10px] text-red-500/50 uppercase tracking-[0.3em] font-bold mt-1">Temporary Shutdown Range</p>
+          </div>
+          <button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:text-red-500 transition-all"><X size={20} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Start Date</label>
-              <input type="date" required value={data.startDate} onChange={e => setData({...data, startDate: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" />
+        
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <div className="grid grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Start Lockdown</label>
+              <input type="date" required value={data.startDate} onChange={e => setData({...data, startDate: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-5 font-headline text-sm focus:border-red-500 outline-none" />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">End Date</label>
-              <input type="date" required min={data.startDate} value={data.endDate} onChange={e => setData({...data, endDate: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" />
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">End Lockdown</label>
+              <input type="date" required min={data.startDate} value={data.endDate} onChange={e => setData({...data, endDate: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-5 font-headline text-sm focus:border-red-500 outline-none" />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Reason (Optional)</label>
-            <input type="text" value={data.reason} onChange={e => setData({...data, reason: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" placeholder="e.g. Renovation" />
+          <div className="space-y-3">
+            <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Reason for Closure</label>
+            <input type="text" value={data.reason} onChange={e => setData({...data, reason: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-5 font-headline text-sm focus:border-red-500 outline-none" placeholder="e.g. Studio Refurbishment" />
           </div>
-          <div className="pt-6"><button disabled={submitting} className="w-full bg-red-600 text-white p-6 font-headline uppercase font-bold tracking-[0.2em] shadow-lg hover:shadow-red-500/20 transition-all disabled:opacity-50">{submitting ? 'Blocking...' : 'Confirm Closure'}</button></div>
+          <div className="pt-4">
+            <button disabled={submitting} className="w-full bg-red-600 text-white py-6 font-headline uppercase font-black text-[11px] tracking-[0.4em] shadow-xl hover:bg-red-700 transition-all disabled:opacity-50">
+              {submitting ? 'ENFORCING CLOSURE...' : 'CONFIRM STUDIO SHUTDOWN'}
+            </button>
+          </div>
         </form>
       </motion.div>
     </div>
@@ -1015,35 +1579,48 @@ function EditClientModal({ client, onClose, onSuccess }: { client: Client, onClo
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    try { await updateClient(client.uid, formData); toast.success("Client profile updated"); onSuccess(); } catch (error) { toast.error("Failed to update client"); } finally { setSubmitting(false); }
+    try {
+      await updateClient(client.uid, formData);
+      toast.success("Client profile updated");
+      onSuccess();
+    } catch (error) {
+      toast.error("Failed to update client");
+    } finally {
+      setSubmitting(false);
+    }
   };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-surface/80 backdrop-blur-md">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg bg-surface-container p-8 border border-outline-variant/20 shadow-2xl">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="font-headline text-2xl font-bold uppercase tracking-widest">Edit Client Profile</h2>
-          <button onClick={onClose} className="p-2 hover:bg-surface-container-highest"><XSquare size={24} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-stone-950/80 backdrop-blur-xl">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-xl bg-surface-container border border-outline-variant/10 shadow-3xl overflow-hidden">
+         <div className="bg-surface-container-highest/20 p-8 border-b border-outline-variant/10 flex justify-between items-center">
+          <div>
+            <h2 className="font-headline text-3xl font-bold uppercase tracking-tight text-on-surface">Client Profile</h2>
+            <p className="text-[10px] text-primary uppercase tracking-[0.3em] font-bold mt-1">Information Record Update</p>
+          </div>
+          <button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:text-primary transition-all"><X size={20} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Full Name</label>
-            <input required type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" />
+        
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <div className="space-y-3">
+            <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Display Name</label>
+            <input required type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary outline-none" />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Email Address</label>
-            <input 
-              required 
-              type="email" 
-              value={formData.email} 
-              onChange={e => setFormData({...formData, email: e.target.value})}
-              className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none transition-colors" 
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Email Contact</label>
+              <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary outline-none" />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-outline-variant">Phone Number</label>
+              <input type="tel" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/20 p-5 font-headline text-sm focus:border-primary outline-none" />
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest font-bold opacity-60">Phone Number</label>
-            <input type="tel" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant/30 p-4 focus:border-primary focus:outline-none" placeholder="(XXX) XXX-XXXX" />
+          <div className="pt-4">
+            <button disabled={submitting} className="w-full gold-gradient py-6 font-headline uppercase font-black text-[11px] tracking-[0.4em] shadow-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50">
+              {submitting ? 'SYNCHRONIZING...' : 'SAVE MODIFICATIONS'}
+            </button>
           </div>
-          <div className="pt-6"><button disabled={submitting} className="w-full bg-primary text-on-primary p-6 font-headline uppercase font-bold tracking-[0.2em] shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50">{submitting ? 'Saving...' : 'Update Profile'}</button></div>
         </form>
       </motion.div>
     </div>

@@ -11,6 +11,16 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+console.log("Firebase config check:", {
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasProjectId: !!firebaseConfig.projectId,
+  projectId: firebaseConfig.projectId
+});
+
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error("CRITICAL: Firebase configuration is missing! Check your .env.local file.");
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

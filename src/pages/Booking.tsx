@@ -6,7 +6,7 @@ import { SERVICES } from '../data/services';
 import { BARBERS, Barber } from '../data/barbers';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../config/firebase';
-import { getBlockedSlots, getBookingsByDate, createBooking, getBlockedRanges, BlockedRange, getClientByUid } from '../services/api';
+import { getBlockedSlots, getBookingsByDate, createBooking, getBlockedRanges, BlockedRange, getClientByUid, getBusinessSettings, BusinessSettings, getShopHoursForDate, generateTimeSlots, isSlotAvailableForService, timeToMinutes } from '../services/api';
 import { sendBookingConfirmation } from '../services/email';
 import toast from 'react-hot-toast';
 
@@ -29,6 +29,7 @@ export default function Booking() {
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
+  const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
   const [isSuspended, setIsSuspended] = useState(false);
 
   // Check if user is suspended
@@ -47,57 +48,33 @@ export default function Booking() {
     checkSuspension();
   }, [user]);
 
-  // Shop Hours & Interval Logic
-  const generateTimeSlots = () => {
-    const slots = [];
-    let current = new Date();
-    current.setHours(9, 0, 0, 0); // Start at 9:00 AM
-    const end = new Date();
-    end.setHours(18, 0, 0, 0); // End at 6:00 PM
-
-    while (current < end) {
-      slots.push(current.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      }));
-      current.setMinutes(current.getMinutes() + 15);
-    }
-    return slots;
-  };
 
   // Fetch real availability
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const ranges = await getBlockedRanges();
+        const [ranges, settings] = await Promise.all([
+          getBlockedRanges(),
+          getBusinessSettings()
+        ]);
         setBlockedRanges(ranges);
+        setBusinessSettings(settings);
       } catch (error) {
-        console.error("Failed to load blocked ranges");
+        console.error("Failed to load initial data");
       }
     };
     fetchInitialData();
   }, []);
 
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || !businessSettings) return;
 
     const fetchAvailability = async () => {
         setLoadingTimes(true);
         try {
-            // Check if date is in a blocked range
-            const isDateRangeBlocked = blockedRanges.some(range => {
-              const start = new Date(range.startDate);
-              const end = new Date(range.endDate);
-              const current = new Date(selectedDate);
-              // Set all to midnight for date-only comparison
-              start.setHours(0,0,0,0);
-              end.setHours(0,0,0,0);
-              current.setHours(0,0,0,0);
-              return current >= start && current <= end;
-            });
+            const hours = getShopHoursForDate(businessSettings, selectedDate, blockedRanges);
 
-            if (isDateRangeBlocked) {
+            if (hours.closed) {
               setAvailableTimes([]);
               return;
             }
@@ -107,11 +84,34 @@ export default function Booking() {
                 getBlockedSlots(selectedDate)
             ]);
 
-            const allPossibleSlots = generateTimeSlots();
+            const allPossibleSlots = generateTimeSlots(hours.open, hours.close);
+            
+            // Current time check for "today"
+            const now = new Date();
+            const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+
+            const serviceDuration = selectedService?.duration || 30;
+
             const filtered = allPossibleSlots.filter(slot => {
-                const isBooked = dayBookings.some(b => b.time === slot);
-                const isBlocked = blockedSlots.some(s => s.time === slot);
-                return !isBooked && !isBlocked;
+                // 1. Core availability (Shop hours, overlaps, manual blocks)
+                const isAvailable = isSlotAvailableForService(
+                  slot, 
+                  serviceDuration, 
+                  hours, 
+                  dayBookings, 
+                  blockedSlots
+                );
+                
+                if (!isAvailable) return false;
+
+                // 2. Additional "Today" check: Can't book in the past or within next 30 mins
+                if (selectedDate === localDateStr) {
+                  const slotTimeInMinutes = timeToMinutes(slot);
+                  if (slotTimeInMinutes < currentTimeInMinutes + 30) return false;
+                }
+
+                return true;
             });
 
             setAvailableTimes(filtered);
@@ -123,36 +123,29 @@ export default function Booking() {
     };
 
     fetchAvailability();
-  }, [selectedDate, blockedRanges]);
+  }, [selectedDate, blockedRanges, businessSettings]);
 
-  // Available dates (next 30 days)
+  // Available dates (next 45 days)
   const availableDates = useMemo(() => {
+    if (!businessSettings) return [];
+    
     const dates = [];
-    for (let i = 0; i < 30; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
+    const today = new Date();
+    
+    for (let i = 0; i < 45; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       
-      // Skip Sundays (optional shop rule)
-      if (d.getDay() === 0) continue;
+      const hours = getShopHoursForDate(businessSettings, dateStr, blockedRanges);
 
-      // Skip blocked ranges
-      const isBlocked = blockedRanges.some(range => {
-        const start = new Date(range.startDate);
-        const end = new Date(range.endDate);
-        const current = new Date(dateStr);
-        start.setHours(0,0,0,0);
-        end.setHours(0,0,0,0);
-        current.setHours(0,0,0,0);
-        return current >= start && current <= end;
-      });
-
-      if (!isBlocked) {
+      if (!hours.closed) {
         dates.push(dateStr);
       }
     }
     return dates;
-  }, [blockedRanges]);
+  }, [blockedRanges, businessSettings]);
+
 
   const handleBarberSelect = (barber: Barber) => {
     setSelectedBarber(barber);
@@ -294,7 +287,7 @@ export default function Booking() {
             <p className="text-on-surface-variant font-body mb-12 text-sm">Booking with <span className="text-primary font-bold">{selectedBarber?.name}</span></p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {availableDates.map((date) => {
-                const d = new Date(date);
+                const d = new Date(date + 'T00:00:00');
                 return (
                   <button
                     key={date}
@@ -406,7 +399,7 @@ export default function Booking() {
                   <div className="flex items-center gap-3 text-on-surface">
                     <CalendarIcon size={18} className="text-primary" />
                     <span className="font-body">
-                      {new Date(selectedDate!).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      {new Date(selectedDate! + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-on-surface mt-2">
@@ -464,7 +457,7 @@ export default function Booking() {
               Booking Confirmed
             </h1>
             <p className="text-on-surface-variant text-lg mb-12 max-w-md mx-auto">
-              Your appointment with <span className="text-primary font-bold">{selectedBarber?.name}</span> for {selectedService.name} is set for {selectedTime} on {new Date(selectedDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.
+              Your appointment with <span className="text-primary font-bold">{selectedBarber?.name}</span> for {selectedService.name} is set for {selectedTime} on {new Date(selectedDate! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.
             </p>
             <button 
               onClick={() => navigate('/dashboard')}

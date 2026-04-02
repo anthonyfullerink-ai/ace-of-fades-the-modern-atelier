@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Booking from './pages/Booking';
 import Auth from './pages/Auth';
 import AdminDashboard from './pages/AdminDashboard';
+import ScrollToTop from './components/ScrollToTop';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -54,6 +55,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         <Toaster position="top-right" toastOptions={{
           style: {

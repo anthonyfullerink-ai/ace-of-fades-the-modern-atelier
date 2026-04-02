@@ -20,11 +20,12 @@ export interface Booking {
   customerName?: string;
   customerEmail?: string;
   serviceId: string;
+  serviceDuration?: number; // duration in minutes
   date: string;
   time: string;
   status: 'Upcoming' | 'Completed' | 'Cancelled' | 'No-Show';
   barber: string;
-  createdAt: number;
+  createdAt?: number;
 }
 
 export interface BlockedSlot {
@@ -45,6 +46,59 @@ const bookingsCollection = collection(db, 'bookings');
 const blockedSlotsCollection = collection(db, 'blocked_slots');
 const blockedRangesCollection = collection(db, 'blocked_ranges');
 const usersCollection = collection(db, 'users');
+const settingsCollection = collection(db, 'settings');
+
+export interface DayHours {
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
+export interface WeeklyHours {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
+
+export const WEEKDAY_ORDER: (keyof WeeklyHours)[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday'
+];
+
+export interface SpecialHours {
+  id?: string;
+  date: string; // YYYY-MM-DD
+  open: string;
+  close: string;
+  closed: boolean;
+  reason?: string;
+}
+
+export interface BusinessSettings {
+  weeklyHours: WeeklyHours;
+  specialHours: SpecialHours[];
+  blockedRanges?: { id: string; startDate: string; endDate: string; reason?: string }[];
+  notice?: string;
+}
+
+const DEFAULT_WEEKLY_HOURS: WeeklyHours = {
+  monday: { open: '10:00', close: '18:00', closed: false },
+  wednesday: { open: '10:00', close: '18:00', closed: false },
+  friday: { open: '10:00', close: '18:00', closed: false },
+  thursday: { open: '09:30', close: '18:00', closed: false },
+  saturday: { open: '09:00', close: '15:00', closed: false },
+  sunday: { open: '10:00', close: '18:00', closed: false },
+  tuesday: { open: '10:00', close: '18:00', closed: false },
+};
 
 export interface Client {
   uid: string;
@@ -67,14 +121,25 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
   ]);
 };
 
-export const createBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>) => {
+export const createBooking = async (booking: Booking): Promise<string> => {
   try {
-    return await addDoc(bookingsCollection, {
-      ...bookingData,
-      createdAt: Date.now()
+    // If duration is missing, try to find it (for manual entries or legacy support)
+    let finalBooking = { ...booking };
+    if (!finalBooking.serviceDuration) {
+      const { SERVICES } = await import('../data/services');
+      const service = SERVICES.find(s => s.id === booking.serviceId);
+      if (service) {
+        finalBooking.serviceDuration = service.duration;
+      }
+    }
+
+    const docRef = await addDoc(bookingsCollection, { 
+      ...finalBooking, 
+      createdAt: Date.now() 
     });
+    return docRef.id;
   } catch (error) {
-    console.error("Error creating booking: ", error);
+    console.error("Error creating booking:", error);
     throw error;
   }
 };
@@ -411,4 +476,238 @@ export const initClientDoc = async (user: any) => {
   } catch (error) {
     console.error("Error initializing client doc:", error);
   }
+};
+
+// --- Business Settings ---
+
+export const getBusinessSettings = async (): Promise<BusinessSettings> => {
+  try {
+    const settingsRef = doc(db, 'settings', 'business');
+    const docSnap = await getDoc(settingsRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data() as BusinessSettings;
+      // Ensure all days are present and other fields are initialized
+      return {
+        ...data,
+        weeklyHours: { ...DEFAULT_WEEKLY_HOURS, ...data.weeklyHours },
+        specialHours: data.specialHours || [],
+        blockedRanges: data.blockedRanges || [],
+      };
+    }
+    
+    // Return default if no settings exist yet
+    return {
+      weeklyHours: DEFAULT_WEEKLY_HOURS,
+      specialHours: [],
+      blockedRanges: [],
+      notice: ""
+    };
+  } catch (error) {
+    console.error("Error getting business settings:", error);
+    return {
+      weeklyHours: DEFAULT_WEEKLY_HOURS,
+      specialHours: [],
+      blockedRanges: [],
+      notice: ""
+    };
+  }
+};
+
+export const updateBusinessSettings = async (settings: Partial<BusinessSettings>) => {
+  const docRef = doc(db, 'settings', 'business');
+  await setDoc(docRef, settings, { merge: true });
+};
+
+/**
+ * Gets the shop hours for a specific date, factoring in blocked ranges, special hours, and weekly schedule.
+ */
+export const getShopHoursForDate = (
+  settings: BusinessSettings, 
+  dateStr: string, 
+  externalBlockedRanges: BlockedRange[] = []
+): { open: string; close: string; closed: boolean; reason?: string } => {
+  // 1. Check blocked ranges (Closures)
+  // Check both the settings object and external collection for maximum coverage
+  const allBlocked = [...(settings.blockedRanges || []), ...externalBlockedRanges];
+  const isBlocked = allBlocked.some(range => {
+    return dateStr >= range.startDate && dateStr <= range.endDate;
+  });
+  if (isBlocked) {
+    const range = allBlocked.find(r => dateStr >= r.startDate && dateStr <= r.endDate);
+    return { open: '00:00', close: '00:00', closed: true, reason: range?.reason || "Closed for Holiday/Maintenance" };
+  }
+
+  // 2. Check special hours (Overrides)
+  const specialDay = settings.specialHours?.find(sh => sh.date === dateStr);
+  if (specialDay) {
+    return { 
+      open: specialDay.open, 
+      close: specialDay.close, 
+      closed: specialDay.closed, 
+      reason: specialDay.reason || "Special Event" 
+    };
+  }
+
+  // 3. Check weekly hours
+  // Manual parsing of YYYY-MM-DD prevents timezone shifts
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dayNames: (keyof WeeklyHours)[] = [
+    'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
+  ];
+  const dayName = dayNames[date.getDay()];
+  const hours = settings.weeklyHours[dayName];
+  
+  if (!hours || hours.closed) {
+    return { open: '00:00', close: '00:00', closed: true, reason: "Closed Today" };
+  }
+
+  return { open: hours.open, close: hours.close, closed: false };
+};
+
+/**
+ * Generates 15-minute time slots between open and close times.
+ */
+export const generateTimeSlots = (openTimeStr: string, closeTimeStr: string) => {
+  const slots = [];
+  const [openH, openM] = openTimeStr.split(':').map(Number);
+  const [closeH, closeM] = closeTimeStr.split(':').map(Number);
+
+  let current = new Date();
+  current.setHours(openH, openM, 0, 0); 
+  const end = new Date();
+  end.setHours(closeH, closeM, 0, 0);
+
+  while (current < end) {
+    slots.push(current.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    }));
+    current.setMinutes(current.getMinutes() + 15);
+  }
+  return slots;
+};
+
+/**
+ * Checks if the shop is currently open based on settings and specific date overrides.
+ */
+export const isShopOpen = (settings: BusinessSettings, externalBlockedRanges: BlockedRange[] = []): { isOpen: boolean; message: string; nextStatusChange?: string } => {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+  
+  const hours = getShopHoursForDate(settings, dateStr, externalBlockedRanges);
+  
+  if (hours.closed) {
+    return { isOpen: false, message: hours.reason || "Closed" };
+  }
+
+  const [openH, openM] = hours.open.split(':').map(Number);
+  const [closeH, closeM] = hours.close.split(':').map(Number);
+  const openTime = openH * 60 + openM;
+  const closeTime = closeH * 60 + closeM;
+
+  if (currentTime >= openTime && currentTime < closeTime) {
+    return { isOpen: true, message: `Open until ${hours.close}` };
+  }
+  
+  if (currentTime < openTime) {
+    return { isOpen: false, message: `Opens today at ${hours.open}` };
+  }
+
+  return { isOpen: false, message: "Closed for the day" };
+};
+/**
+ * Converts a time string (e.g., "10:00", "02:30 PM", "14:30") to minutes from midnight.
+ */
+export const timeToMinutes = (timeStr: string): number => {
+  if (!timeStr) return 0;
+  
+  // Handle "HH:mm AM/PM" format
+  if (timeStr.includes('AM') || timeStr.includes('PM')) {
+    const [time, period] = timeStr.split(' ');
+    const [hStr, mStr] = time.split(':');
+    let h = parseInt(hStr);
+    const m = parseInt(mStr);
+    
+    if (period === 'PM' && h !== 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    
+    return h * 60 + m;
+  }
+  
+  // Handle "HH:mm" format (24-hour)
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+};
+
+/**
+ * Converts minutes from midnight back to "HH:mm AM/PM" format.
+ */
+export const minutesToTime = (minutes: number): string => {
+  let h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const period = h >= 12 ? 'PM' : 'AM';
+  
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  
+  return `${h}:${m.toString().padStart(2, '0')} ${period}`;
+};
+/**
+ * Formats a time string like "10:30" or "18:00" to "12 PM"
+ */
+export const formatTimeStr = (timeString: string) => {
+  const [h, m] = timeString.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return m === 0 ? `${hour} ${period}` : `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+};
+
+/**
+ * Check if a time slot is available for a service given its duration, 
+ * shop hours, existing bookings, and manual blocks.
+ */
+export const isSlotAvailableForService = (
+  slotTimeStr: string,
+  serviceDuration: number,
+  shopHours: { open: string; close: string; closed: boolean },
+  dayBookings: Booking[],
+  blockedSlots: BlockedSlot[]
+): boolean => {
+  if (shopHours.closed) return false;
+
+  const slotStart = timeToMinutes(slotTimeStr);
+  const slotEnd = slotStart + serviceDuration;
+  const shopOpen = timeToMinutes(shopHours.open);
+  const shopClose = timeToMinutes(shopHours.close);
+
+  // 1. Must be within shop hours
+  if (slotStart < shopOpen || slotEnd > shopClose) return false;
+
+  // 2. Check for overlaps with existing bookings
+  const hasOverlap = dayBookings.some(booking => {
+    if (booking.status === 'Cancelled') return false;
+    
+    const bStart = timeToMinutes(booking.time);
+    // Use stored duration, fallback to 30 mins for legacy
+    const bDuration = booking.serviceDuration || 30; 
+    const bEnd = bStart + bDuration;
+
+    // Overlap condition: (StartA < EndB) && (EndA > StartB)
+    return slotStart < bEnd && slotEnd > bStart;
+  });
+
+  if (hasOverlap) return false;
+
+  // 3. Check for overlaps with manually blocked slots (assuming they are 15-min blocks)
+  const isBlocked = blockedSlots.some(blocked => {
+    const blockStart = timeToMinutes(blocked.time);
+    const blockEnd = blockStart + 15;
+    return slotStart < blockEnd && slotEnd > blockStart;
+  });
+
+  return !isBlocked;
 };

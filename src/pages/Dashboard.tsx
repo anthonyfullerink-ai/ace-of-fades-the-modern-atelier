@@ -1,11 +1,12 @@
 import { motion } from 'motion/react';
-import { Calendar, Scissors, ChevronRight, Loader2, User } from 'lucide-react';
+import { Calendar, Scissors, ChevronRight, Loader2, User, X, AlertCircle } from 'lucide-react';
 import { useState, useEffect, FormEvent } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../config/firebase';
 import { getUserBookings, cancelBooking, rescheduleBooking, Booking, updateClient, getClientByUid, Client } from '../services/api';
 import { SERVICES } from '../data/services';
 import toast from 'react-hot-toast';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function Dashboard() {
   const [user] = useAuthState(auth);
@@ -21,6 +22,13 @@ export default function Dashboard() {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDangerous?: boolean;
+  }>({ show: false, title: '', message: '', onConfirm: () => {} });
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -74,14 +82,23 @@ export default function Dashboard() {
   }, [user]);
 
   const handleCancel = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this appointment?")) return;
-    try {
-      await cancelBooking(id);
-      toast.success("Appointment cancelled");
-      fetchBookings();
-    } catch (e) {
-      toast.error("Failed to cancel appointment");
-    }
+    setConfirmModal({
+      show: true,
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment? This action cannot be undone.',
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          await cancelBooking(id);
+          toast.success("Appointment cancelled");
+          fetchBookings();
+        } catch (e) {
+          toast.error("Failed to cancel appointment");
+        } finally {
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        }
+      }
+    });
   };
 
   const handleReschedule = async (id: string) => {
@@ -348,6 +365,14 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+      <ConfirmationModal 
+        show={confirmModal.show}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        isDangerous={confirmModal.isDangerous}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+      />
     </main>
   );
 }
