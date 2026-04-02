@@ -1,0 +1,17 @@
+﻿src/components/Footer.tsx(3,64): error TS2305: Module '"../services/api"' has no exported member 'formatTimeStr'.
+src/pages/admin/modals/ManualBookingModal.tsx(15,3): error TS2305: Module '"../../../services/api"' has no exported member 'formatTimeStr'.
+src/pages/admin/tabs/AuditLogTab.tsx(29,46): error TS2554: Expected 0 arguments, but got 1.
+src/pages/admin/tabs/AvailabilityTab.tsx(4,32): error TS2305: Module '"../../../services/api"' has no exported member 'timeToMinutes'.
+src/pages/admin/tabs/CalendarTab.tsx(4,19): error TS2305: Module '"../../../services/api"' has no exported member 'timeToMinutes'.
+src/pages/admin/tabs/CalendarTab.tsx(4,34): error TS2305: Module '"../../../services/api"' has no exported member 'minutesToTime'.
+src/pages/admin/tabs/ServicesTab.tsx(70,21): error TS2339: Property 'desc' does not exist on type 'Service'.
+src/pages/Auth.tsx(12,10): error TS2305: Module '"../services/api"' has no exported member 'initClientDoc'.
+src/pages/Auth.tsx(42,24): error TS2345: Argument of type 'User' is not assignable to parameter of type 'Omit<LoginLog, "id" | "timestamp">'.
+  Type 'User' is missing the following properties from type 'Omit<LoginLog, "id" | "timestamp">': role, userId, userAgent
+src/pages/Auth.tsx(47,24): error TS2345: Argument of type 'User' is not assignable to parameter of type 'Omit<LoginLog, "id" | "timestamp">'.
+  Type 'User' is missing the following properties from type 'Omit<LoginLog, "id" | "timestamp">': role, userId, userAgent
+src/pages/Booking.tsx(20,3): error TS2305: Module '"../services/api"' has no exported member 'timeToMinutes'.
+src/pages/Home.tsx(5,49): error TS2305: Module '"../services/api"' has no exported member 'isShopOpen'.
+src/services/bookingConflicts.ts(10,3): error TS2305: Module '"./api"' has no exported member 'timeToMinutes'.
+src/services/migration.ts(27,24): error TS2345: Argument of type '{ name: string; desc: string; price: string; duration: number; }' is not assignable to parameter of type 'Omit<Service, "id">'.
+  Property 'category' is missing in type '{ name: string; desc: string; price: string; duration: number; }' but required in type 'Omit<Service, "id">'.

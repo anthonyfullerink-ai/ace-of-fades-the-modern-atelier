@@ -12,7 +12,8 @@ import {
   deleteDoc,
   orderBy,
   limit,
-  increment
+  increment,
+  onSnapshot
 } from 'firebase/firestore';
 
 export interface Booking {
@@ -29,6 +30,7 @@ export interface Booking {
   createdAt?: number;
   source?: 'local' | 'vagaro'; // origin of the booking
   externalId?: string; // ID from external system (e.g., Vagaro)
+  specialInstructions?: string;
 }
 
 export interface BlockedSlot {
@@ -53,6 +55,9 @@ const settingsCollection = collection(db, 'settings');
 const servicesCollection = collection(db, 'services');
 const loginLogsCollection = collection(db, 'login_logs');
 const dailyStatsCollection = collection(db, 'daily_stats');
+const reviewsCollection = collection(db, 'reviews');
+const inquiriesCollection = collection(db, 'inquiries');
+const notificationsCollection = collection(db, 'notifications');
 
 export interface DailyStats {
   id?: string;
@@ -135,6 +140,41 @@ export interface Client {
   noShowCount?: number;
   source?: 'local' | 'vagaro'; // origin of the client record
   externalId?: string; // ID from external system (e.g., Vagaro)
+  notes?: string;
+}
+
+export interface Review {
+  id?: string;
+  bookingId: string;
+  userId: string;
+  clientName: string;
+  rating: number; // 1-5
+  comment: string;
+  date: string; // YYYY-MM-DD
+  createdAt: number;
+}
+
+export interface Inquiry {
+  id?: string;
+  name: string;
+  eventType: string;
+  phoneNumber: string;
+  email: string;
+  eventDate: string;
+  description: string;
+  createdAt: number;
+  status: 'pending' | 'reviewed' | 'responded';
+}
+
+export interface Notification {
+  id?: string;
+  userId: string; // Receiver's UID (admin UID)
+  title: string;
+  message: string;
+  type: 'inquiry' | 'booking' | 'system';
+  read: boolean;
+  createdAt: number;
+  link?: string;
 }
 
 const withTimeout = <T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
@@ -587,6 +627,7 @@ export interface Service {
   desc: string;
   price: string;
   duration: number; // in minutes
+  isHidden?: boolean;
 }
 
 export const getServices = async (): Promise<Service[]> => {
@@ -982,5 +1023,120 @@ export const getTrafficStats = async (days: number = 30): Promise<DailyStats[]> 
   } catch (err) {
     console.error("Failed to fetch traffic stats:", err);
     return [];
+  }
+};
+
+// --- Review Management ---
+
+export const submitReview = async (review: Review) => {
+  try {
+    const docRef = await addDoc(reviewsCollection, review);
+    return docRef.id;
+  } catch (error) {
+    console.error("Error submitting review:", error);
+    throw error;
+  }
+};
+
+export const getUserReviews = async (userId: string): Promise<Review[]> => {
+  try {
+    const q = query(reviewsCollection, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+  } catch (error) {
+    console.error("Error getting user reviews:", error);
+    return [];
+  }
+};
+
+export const getAllReviews = async (): Promise<Review[]> => {
+  try {
+    const q = query(reviewsCollection, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+  } catch (error) {
+    console.error("Error getting all reviews:", error);
+    return [];
+  }
+};
+// --- Inquiries & Notifications ---
+
+export const createInquiry = async (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'status'>) => {
+  try {
+    const newInquiry = {
+      ...inquiry,
+      createdAt: Date.now(),
+      status: 'pending' as const
+    };
+    const docRef = await addDoc(inquiriesCollection, newInquiry);
+    
+    // Auto-notify admins
+    const { ADMIN_EMAILS } = await import('../config/firebase');
+    // For simplicity, we'll create a notification that admins can see. 
+    // In a multi-admin system, we might create per-admin docs or a global 'admin-notifications' collection.
+    // Here we'll use a special 'admin-group' userId or just broadcast to a collection admins listen to.
+    await createNotification({
+      userId: 'admin-global', // Special ID for admin-wide notifications
+      title: 'New Bespoke Inquiry',
+      message: `${inquiry.name} requested a ${inquiry.eventType} package.`,
+      type: 'inquiry',
+      read: false,
+      createdAt: Date.now(),
+      link: '/admin?view=inquiries'
+    });
+
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating inquiry:", error);
+    throw error;
+  }
+};
+
+export const getInquiries = async (): Promise<Inquiry[]> => {
+  try {
+    const q = query(inquiriesCollection, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Inquiry));
+  } catch (error) {
+    console.error("Error getting inquiries:", error);
+    return [];
+  }
+};
+
+export const createNotification = async (notification: Omit<Notification, 'id'>) => {
+  try {
+    const docRef = await addDoc(notificationsCollection, notification);
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating notification:", error);
+    throw error;
+  }
+};
+
+export const subscribeToNotifications = (userId: string, callback: (notifications: Notification[]) => void) => {
+  const q = query(
+    notificationsCollection, 
+    where("userId", "in", [userId, 'admin-global']), 
+    orderBy("createdAt", "desc"),
+    limit(20)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const notifications = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Notification));
+    callback(notifications);
+  });
+};
+
+export const markNotificationRead = async (id: string) => {
+  try {
+    const docRef = doc(db, 'notifications', id);
+    await updateDoc(docRef, { read: true });
+    return true;
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    throw error;
   }
 };

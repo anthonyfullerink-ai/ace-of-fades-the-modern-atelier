@@ -12,7 +12,8 @@ import {
   BookOpen,
   RefreshCw,
   BarChart3,
-  ShieldCheck
+  ShieldCheck,
+  Mail
 } from 'lucide-react';
 import { auth } from '../../config/firebase';
 
@@ -39,6 +40,7 @@ const tabs = [
   { id: 'availability', icon: Clock, title: 'Availability' },
   { id: 'clients', icon: Users, title: 'Clients' },
   { id: 'services', icon: Scissors, title: 'Services' },
+  { id: 'inquiries', icon: Mail, title: 'Inquiries' },
   { id: 'settings', icon: Settings, title: 'Settings' },
   { id: 'knowledge', icon: BookOpen, title: 'Knowledge Base' }
 ];

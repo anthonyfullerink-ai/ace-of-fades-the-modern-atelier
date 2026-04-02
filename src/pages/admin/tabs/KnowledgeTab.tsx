@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { BookOpen, HelpCircle, AlertTriangle, CalendarDays, Users, Scissors } from 'lucide-react';
+import { BookOpen, HelpCircle, AlertTriangle, CalendarDays, Users, Scissors, Mail, Bell } from 'lucide-react';
 
 export default function KnowledgeTab() {
   return (
@@ -74,6 +74,28 @@ export default function KnowledgeTab() {
               Add, edit, or remove services from the <strong>Services</strong> tab. Changes here directly affect what clients see on the public booking page. Ensure descriptions and prices are accurate.
             </p>
           </div>
+
+          <div className="bg-surface-container border border-outline-variant/10 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center gap-3 text-on-surface">
+              <Mail size={20} className="text-primary" />
+              <h4 className="font-headline font-bold uppercase tracking-wider text-sm">Bespoke Inquiries</h4>
+            </div>
+            <ul className="list-disc list-inside text-sm text-on-surface-variant space-y-2 font-body">
+              <li>Manage high-end, private event requests (Weddings, Corporate Events, etc.) in the <strong>Inquiries</strong> tab.</li>
+              <li>Toggle between <strong>Pending</strong>, <strong>Reviewed</strong>, and <strong>Responded</strong> statuses to track progress.</li>
+              <li>Expand any inquiry card to see full contact details and specific requirements.</li>
+            </ul>
+          </div>
+
+          <div className="bg-surface-container border border-outline-variant/10 p-6 space-y-4 shadow-sm">
+            <div className="flex items-center gap-3 text-on-surface">
+              <Bell size={20} className="text-primary" />
+              <h4 className="font-headline font-bold uppercase tracking-wider text-sm">Notification Engine</h4>
+            </div>
+            <p className="text-sm text-on-surface-variant font-body">
+              Stay updated with real-time alerts via the <strong>Bell Icon</strong> in the top navigation. A red badge indicates unread inquiries or system alerts. Clicking the bell allows you to mark items as read or jump directly to the relevant dashboard.
+            </p>
+          </div>
         </div>
 
         {/* Troubleshooting & Tech Support */}
@@ -96,6 +118,13 @@ export default function KnowledgeTab() {
              <h4 className="font-headline font-bold uppercase text-sm mb-2">"A new service isn't showing up"</h4>
              <p className="text-sm text-on-surface-variant">
                Go to the <strong>Services</strong> tab and ensure the service was actually created and saved. If the UI still doesn't reflect it, try clicking the "Sync Data" (refresh arrows) button at the top right of the Admin Portal.
+             </p>
+          </div>
+
+          <div className="bg-surface-container border border-outline-variant/10 p-6 mb-4">
+             <h4 className="font-headline font-bold uppercase text-sm mb-2">"The Notification Bell isn't updating"</h4>
+             <p className="text-sm text-on-surface-variant">
+               Verify your internet connection. Notifications rely on a real-time connection to the database. If you see a "Connection Error" toast, the bell may not reflect live updates until connection is restored.
              </p>
           </div>
 

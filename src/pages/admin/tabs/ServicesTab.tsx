@@ -10,7 +10,11 @@ import {
   Check, 
   X,
   LayoutGrid,
-  List
+  List,
+  Eye,
+  EyeOff,
+  Link as LinkIcon,
+  Copy
 } from 'lucide-react';
 import { Service } from '../../../services/api';
 import toast from 'react-hot-toast';
@@ -39,11 +43,12 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
     name: '',
     desc: '',
     price: '',
-    duration: 30
+    duration: 30,
+    isHidden: false
   });
 
   const resetForm = () => {
-    setFormData({ name: '', desc: '', price: '', duration: 30 });
+    setFormData({ name: '', desc: '', price: '', duration: 30, isHidden: false });
     setIsAdding(false);
     setEditingId(null);
   };
@@ -69,7 +74,8 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
       name: service.name,
       desc: service.desc,
       price: service.price,
-      duration: service.duration
+      duration: service.duration,
+      isHidden: service.isHidden || false
     });
     setEditingId(service.id);
     setIsAdding(true);
@@ -84,6 +90,12 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
         toast.error("Failed to delete service");
       }
     }
+  };
+
+  const handleCopyLink = (serviceId: string) => {
+    const link = `${window.location.origin}/book?serviceId=${serviceId}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Direct booking link copied!");
   };
 
   const handleMigrate = async () => {
@@ -230,6 +242,26 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
                   </div>
                 </div>
 
+                <div className="flex items-center gap-4 bg-surface-container-low p-4 border border-outline-variant/10">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, isHidden: !formData.isHidden})}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${formData.isHidden ? 'bg-outline' : 'bg-primary'}`}
+                  >
+                    <span
+                      className={`${
+                        formData.isHidden ? 'translate-x-1' : 'translate-x-6'
+                      } inline-block h-4 w-4 transform rounded-full bg-on-primary transition-transform`}
+                    />
+                  </button>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-on-surface">Public Visibility</span>
+                    <span className="text-xs text-on-surface-variant">
+                      {formData.isHidden ? 'Hidden from public ritual menu' : 'Visible to everyone'}
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-4 pt-6">
                   <button 
                     type="button" 
@@ -264,7 +296,19 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
                 <div className="bg-primary/5 p-3 border border-primary/20 text-primary">
                   <Scissors size={24} />
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 items-center">
+                  {service.isHidden && (
+                    <span className="bg-outline/20 text-on-surface-variant px-2 py-0.5 text-[8px] uppercase font-bold tracking-widest border border-outline/20 mr-2 flex items-center gap-1">
+                      <EyeOff size={10} /> Hidden
+                    </span>
+                  )}
+                  <button 
+                    onClick={() => handleCopyLink(service.id)} 
+                    className="p-2 text-on-surface-variant hover:text-primary transition-colors"
+                    title="Copy Direct Link"
+                  >
+                    <LinkIcon size={18} />
+                  </button>
                   <button onClick={() => startEdit(service)} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
                     <Edit2 size={18} />
                   </button>
@@ -296,8 +340,9 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
               <thead>
                 <tr className="bg-surface-container-highest border-b border-outline-variant/20">
                   <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Service</th>
-                  <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Price</th>
+                   <th className="p-6 font-headline uppercase text-[10px] tracking-widest">Price</th>
                   <th className="p-6 font-headline uppercase text-[10px] tracking-widest text-center">Duration</th>
+                  <th className="p-6 font-headline uppercase text-[10px] tracking-widest text-center">Status</th>
                   <th className="p-6 font-headline uppercase text-[10px] tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
@@ -311,11 +356,29 @@ const ServicesTab: React.FC<ServicesTabProps> = ({
                     <td className="p-6">
                       <div className="font-headline font-bold text-lg text-primary">${service.price}</div>
                     </td>
-                    <td className="p-6 text-center">
+                     <td className="p-6 text-center">
                       <div className="font-headline text-[10px] uppercase font-bold tracking-widest">{service.duration} mins</div>
+                    </td>
+                    <td className="p-6 text-center">
+                      {service.isHidden ? (
+                        <span className="inline-flex items-center gap-1 bg-outline/10 text-on-surface-variant px-2 py-0.5 text-[8px] uppercase font-bold tracking-widest border border-outline/20">
+                          <EyeOff size={10} /> Hidden
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 text-[8px] uppercase font-bold tracking-widest border border-primary/20">
+                          <Eye size={10} /> Public
+                        </span>
+                      )}
                     </td>
                     <td className="p-6 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleCopyLink(service.id)} 
+                          className="p-2 text-on-surface-variant hover:text-primary transition-colors"
+                          title="Copy Direct Link"
+                        >
+                          <LinkIcon size={18} />
+                        </button>
                         <button onClick={() => startEdit(service)} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
                           <Edit2 size={18} />
                         </button>

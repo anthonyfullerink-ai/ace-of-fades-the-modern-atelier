@@ -30,6 +30,7 @@ interface ClientsTabProps {
   setClientSortOrder: (val: 'newest' | 'oldest' | 'az' | 'za') => void;
   onSuspendClient: (client: Client, currentlySuspended: boolean) => void;
   onDeleteClient: (uid: string) => void;
+  onUpdateClient: (uid: string, data: Partial<Client>) => Promise<boolean>;
 }
 
 const ClientsTab: React.FC<ClientsTabProps> = ({
@@ -45,7 +46,8 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
   clientSortOrder = 'newest',
   setClientSortOrder,
   onSuspendClient,
-  onDeleteClient
+  onDeleteClient,
+  onUpdateClient
 }) => {
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
@@ -283,7 +285,12 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
                               className="overflow-hidden"
                             >
                               <div className="p-8 border-l-4 border-primary">
-                                <div className="flex items-center gap-2 mb-6">
+                                <ClientNotesSection 
+                                  client={client} 
+                                  onUpdate={onUpdateClient} 
+                                />
+
+                                <div className="flex items-center gap-2 mb-6 mt-12">
                                   <History className="text-primary" size={18} />
                                   <h5 className="font-headline font-bold uppercase tracking-widest text-xs">Ritual History</h5>
                                 </div>
@@ -342,6 +349,50 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
         </div>
       </div>
     </motion.div>
+  );
+};
+
+const ClientNotesSection: React.FC<{ 
+  client: Client; 
+  onUpdate: (uid: string, data: Partial<Client>) => Promise<boolean>;
+}> = ({ client, onUpdate }) => {
+  const [notes, setNotes] = useState(client.notes || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const hasChanges = notes !== (client.notes || '');
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onUpdate(client.uid, { notes: notes.trim() });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="mb-10">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <History className="text-primary/60" size={16} />
+          <h5 className="font-headline font-bold uppercase tracking-widest text-[10px] text-primary/60">Ritual Notes</h5>
+        </div>
+        {hasChanges && (
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className="text-[10px] uppercase font-bold tracking-widest bg-primary text-on-primary px-3 py-1.5 hover:brightness-110 transition-all disabled:opacity-50"
+          >
+            {isSaving ? 'Processing...' : 'Save Ritual Notes'}
+          </button>
+        )}
+      </div>
+      <textarea 
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Internal notes about style preferences, techniques, or profile details..."
+        className="w-full bg-surface-container border border-outline-variant/10 p-4 font-body text-sm text-on-surface focus:border-primary/30 focus:outline-none transition-all min-h-[100px] resize-none"
+      />
+    </div>
   );
 };
 

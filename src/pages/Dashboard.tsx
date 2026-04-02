@@ -1,8 +1,10 @@
 import { motion } from 'motion/react';
-import { Calendar, Scissors, ChevronRight, Loader2, User } from 'lucide-react';
+import { Calendar, Scissors, ChevronRight, Loader2, User, Star } from 'lucide-react';
 import { useState, useEffect, FormEvent } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../config/firebase';
+import ConfirmationModal from '../components/ConfirmationModal';
+import ReviewModal from '../components/ReviewModal';
 import { 
   getUserBookings, 
   cancelBooking, 
@@ -21,11 +23,12 @@ import {
   generateTimeSlots,
   isSlotAvailableForService,
   BusinessSettings,
-  BlockedRange
+  BlockedRange,
+  getUserReviews,
+  Review
 } from '../services/api';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -55,6 +58,10 @@ export default function Dashboard() {
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
   const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
+  
+  // Review state
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -89,12 +96,14 @@ export default function Dashboard() {
   const fetchData = async () => {
     if (!user) return;
     try {
-      const [bookingsData, servicesData] = await Promise.all([
+      const [bookingsData, servicesData, reviewsData] = await Promise.all([
         getUserBookings(user.uid),
-        getServices()
+        getServices(),
+        getUserReviews(user.uid)
       ]);
       setBookings(bookingsData);
       setServices(servicesData);
+      setReviews(reviewsData);
     } catch (error) {
       console.error(error);
       const isTimeout = error instanceof Error && error.message.includes("timed out");
@@ -447,18 +456,47 @@ export default function Dashboard() {
                   <p className="font-body text-sm text-on-surface-variant">{item.date}</p>
                 </div>
                 {item.status !== 'Cancelled' && (
-                  <button 
-                    onClick={() => navigate(`/book?serviceId=${item.serviceId}`)}
-                    className="text-primary font-headline text-[10px] tracking-widest uppercase border-b border-primary/40 hover:border-primary pb-1 transition-all flex items-center gap-2"
-                  >
-                    BOOK AGAIN <ChevronRight size={12} />
-                  </button>
+                  <div className="flex flex-col items-end gap-3">
+                    {item.status !== 'Cancelled' && (
+                      <>
+                        {!reviews.some(r => r.bookingId === item.id) ? (
+                          <button 
+                            onClick={() => setSelectedBookingForReview(item)}
+                            className="bg-primary/10 text-primary font-headline text-[10px] tracking-widest uppercase px-4 py-2 hover:bg-primary hover:text-on-primary transition-all flex items-center gap-2"
+                          >
+                            RATE RITUAL <Star size={12} className="fill-current" />
+                          </button>
+                        ) : (
+                            <div className="flex items-center gap-1 text-[9px] uppercase tracking-widest font-bold text-success/60 bg-success/5 px-3 py-1 border border-success/10">
+                                <span>Ritual Rated</span>
+                                <div className="flex gap-0.5">
+                                    {[...Array(reviews.find(r => r.bookingId === item.id)?.rating || 0)].map((_, i) => (
+                                        <Star key={i} size={8} className="fill-current" />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <button 
+                          onClick={() => navigate(`/book?serviceId=${item.serviceId}`)}
+                          className="text-on-surface-variant font-headline text-[10px] tracking-widest uppercase border-b border-outline-variant/40 hover:border-primary hover:text-primary pb-1 transition-all flex items-center gap-2"
+                        >
+                          BOOK AGAIN <ChevronRight size={12} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </motion.div>
             ))}
           </div>
         )}
       </section>
+      <ReviewModal 
+        show={!!selectedBookingForReview}
+        booking={selectedBookingForReview!}
+        onClose={() => setSelectedBookingForReview(null)}
+        onSuccess={fetchData}
+      />
       <ConfirmationModal 
         show={confirmModal.show}
         title={confirmModal.title}

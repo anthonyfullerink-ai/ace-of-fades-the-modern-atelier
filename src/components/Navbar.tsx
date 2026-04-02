@@ -1,16 +1,20 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, User, Menu, X, LogOut, LogIn } from 'lucide-react';
+import { Bell, User, Menu, X, LogOut, LogIn, Instagram } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, isAdmin } from '../config/firebase';
 import { signOut } from 'firebase/auth';
+import { subscribeToNotifications, markNotificationRead, Notification } from '../services/api';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const [user, loading] = useAuthState(auth);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -29,6 +33,22 @@ export default function Navbar() {
       navigate('/auth');
     }
   };
+
+  useEffect(() => {
+    if (user && isAdmin(user)) {
+      const unsubscribe = subscribeToNotifications(user.uid, (newNotifications) => {
+        setNotifications(newNotifications);
+      });
+      return () => unsubscribe();
+    } else {
+      setNotifications([]);
+    }
+  }, [user]);
+
+  // Close notifications on click outside or navigation
+  useEffect(() => {
+    setShowNotifications(false);
+  }, [location.pathname]);
 
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -73,10 +93,106 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          {!loading && user && (
-            <Link to="/dashboard" className="text-primary hover:bg-primary/5 p-2 transition-colors duration-300 md:block hidden rounded-full">
-              <Bell size={18} />
-            </Link>
+          {!loading && user && isAdmin(user) && (
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`p-2 transition-all duration-300 rounded-full relative ${
+                  showNotifications ? 'bg-primary/20 text-primary' : 'text-primary hover:bg-primary/5'
+                }`}
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-surface shadow-sm animate-pulse" />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showNotifications && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowNotifications(false)} 
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-4 w-80 md:w-96 bg-surface-container border border-outline-variant/20 shadow-2xl z-50 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high/50">
+                        <span className="font-headline text-[10px] uppercase tracking-[0.2em] font-bold text-on-surface">Notifications</span>
+                        {unreadCount > 0 && (
+                          <span className="bg-primary/10 text-primary text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">
+                            {unreadCount} New
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="max-h-[70vh] overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-12 text-center text-on-surface-variant italic text-xs">
+                            No notifications yet
+                          </div>
+                        ) : (
+                          notifications.map((n) => (
+                            <div 
+                              key={n.id}
+                              onClick={async () => {
+                                if (!n.read) await markNotificationRead(n.id!);
+                                if (n.link) {
+                                  navigate(n.link);
+                                  setShowNotifications(false);
+                                }
+                              }}
+                              className={`p-5 border-b border-outline-variant/5 cursor-pointer transition-all hover:bg-white/5 relative group ${
+                                !n.read ? 'bg-primary/5' : ''
+                              }`}
+                            >
+                              {!n.read && (
+                                <div className="absolute left-2 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-full opacity-50" />
+                              )}
+                              <div className="flex justify-between items-start mb-1">
+                                <h4 className={`text-sm font-bold tracking-tight ${!n.read ? 'text-primary' : 'text-on-surface'}`}>
+                                  {n.title}
+                                </h4>
+                                <span className="text-[10px] text-outline whitespace-nowrap">
+                                  {new Date(n.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                </span>
+                              </div>
+                              <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2">
+                                {n.message}
+                              </p>
+                              <div className="mt-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[9px] uppercase tracking-[0.1em] font-bold text-primary">View Details</span>
+                                {!n.read && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markNotificationRead(n.id!);
+                                    }}
+                                    className="text-[9px] uppercase tracking-[0.1em] font-bold text-outline hover:text-on-surface"
+                                  >
+                                    Mark as read
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      
+                      <button 
+                        onClick={() => navigate('/admin')}
+                        className="w-full p-4 text-center border-t border-outline-variant/10 font-headline text-[9px] uppercase tracking-[0.2em] font-bold text-on-surface-variant hover:text-primary hover:bg-white/5 transition-all"
+                      >
+                        Go to Admin Dashboard
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           )}
           
           <button 
@@ -152,6 +268,18 @@ export default function Navbar() {
                     <><LogIn size={20} /> Client Portal</>
                   )}
                 </button>
+
+                <div className="flex gap-6 justify-center mt-12 bg-surface-container/30 p-6 rounded-3xl border border-outline-variant/10">
+                  <a 
+                    href="https://www.instagram.com/aceoffadesbarberstudionj/?hl=en" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors"
+                  >
+                    <Instagram size={20} />
+                    <span className="font-headline text-[10px] tracking-[0.3em] uppercase font-bold">Instagram</span>
+                  </a>
+                </div>
               </motion.div>
             </nav>
           </motion.div>

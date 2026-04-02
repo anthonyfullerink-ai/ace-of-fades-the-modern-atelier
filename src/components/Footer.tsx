@@ -22,7 +22,12 @@ export default function Footer() {
             Precision grooming for the modern gentleman. Elevating the art of the fade in an exclusive, high-end Ace Of Fades setting.
           </p>
           <div className="flex gap-4">
-            <a href="#" className="w-10 h-10 rounded-full border border-outline-variant/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-all duration-500 group">
+            <a 
+              href="https://www.instagram.com/aceoffadesbarberstudionj/?hl=en" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-full border border-outline-variant/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-all duration-500 group"
+            >
               <Instagram size={18} className="text-on-surface-variant group-hover:text-on-primary transition-colors" />
             </a>
             <a href="#" className="w-10 h-10 rounded-full border border-outline-variant/20 flex items-center justify-center hover:bg-primary hover:border-primary transition-all duration-500 group">

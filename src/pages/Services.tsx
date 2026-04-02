@@ -3,17 +3,19 @@ import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getServices, Service } from '../services/api';
 import toast from 'react-hot-toast';
+import InquiryModal from '../components/InquiryModal';
 
 export default function Services() {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showInquiry, setShowInquiry] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const svs = await getServices();
-        setServices(svs);
+        setServices(svs.filter(s => !s.isHidden));
       } catch (error) {
         toast.error("Failed to load services");
       } finally {
@@ -112,11 +114,16 @@ export default function Services() {
           From wedding parties to private executive sessions, we offer tailored experiences beyond the standard menu. Let's craft your ritual.
         </p>
         <div className="relative z-10">
-          <Link to="#" className="inline-block gold-gradient px-12 py-5 text-on-primary font-headline font-bold tracking-widest uppercase hover:brightness-110 transition-all">
+          <button 
+            onClick={() => setShowInquiry(true)}
+            className="inline-block gold-gradient px-12 py-5 text-on-primary font-headline font-bold tracking-widest uppercase hover:brightness-110 transition-all pointer-events-auto"
+          >
             Inquire Privately
-          </Link>
+          </button>
         </div>
       </section>
+
+      <InquiryModal show={showInquiry} onClose={() => setShowInquiry(false)} />
     </main>
   );
 }

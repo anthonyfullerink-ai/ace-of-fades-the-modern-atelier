@@ -25,6 +25,15 @@ service cloud.firestore {
         );
       }
       
+      match /reviews/{reviewId} {
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+        allow read: if request.auth != null && (
+          request.auth.token.email in ['anthony@offgridmediagroup.com', 'admin@offgridmediagroup.com'] ||
+          request.auth.uid == resource.data.userId
+        );
+        allow update, delete: if request.auth != null && request.auth.token.email in ['anthony@offgridmediagroup.com', 'admin@offgridmediagroup.com'];
+      }
+      
       // Default rule for other collections (if any)
       match /{document=**} {
         allow read, write: if request.time < timestamp.date(2026, 4, 30);

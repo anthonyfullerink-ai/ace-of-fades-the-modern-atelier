@@ -39,15 +39,19 @@ export default function Booking() {
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
 
-  const selectedService = useMemo(() => 
-    services.find(s => s.id === serviceId) || services[0], 
-  [serviceId, services]);
+  const selectedService = useMemo(() => {
+    if (serviceId) {
+      return services.find(s => s.id === serviceId);
+    }
+    return services.find(s => !s.isHidden);
+  }, [serviceId, services]);
 
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
   const [isSuspended, setIsSuspended] = useState(false);
+  const [specialInstructions, setSpecialInstructions] = useState('');
 
   // Fetch Services
   useEffect(() => {
@@ -214,7 +218,8 @@ export default function Booking() {
             date: selectedDate,
             time: selectedTime,
             status: 'Upcoming',
-            barber: selectedBarber.name
+            barber: selectedBarber.name,
+            specialInstructions: specialInstructions.trim() || undefined
         });
 
         // Send Email Confirmation (Optional/Best Effort)
@@ -529,6 +534,16 @@ export default function Booking() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            <div className="mb-12 relative z-10">
+              <p className="text-[10px] uppercase tracking-[0.4em] text-primary/60 font-black mb-4">Special Instructions (Optional)</p>
+              <textarea 
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                placeholder="Any specific requests for your barber? (e.g., allergies, preference for low-noise, specific style details)"
+                className="w-full bg-surface-container-highest/30 border border-outline-variant/20 p-6 text-on-surface font-body text-sm focus:border-primary/50 focus:outline-none transition-all placeholder:text-on-surface-variant/30 min-h-[120px] resize-none"
+              />
             </div>
 
             <div className="flex flex-col gap-6 relative z-10">

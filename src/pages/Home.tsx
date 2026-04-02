@@ -54,7 +54,8 @@ export default function Home() {
         ]);
         setSettings(settingsData);
         setShopStatus(isShopOpen(settingsData, rangesData));
-        setServices(servicesData.slice(0, 4));
+        // Filter out hidden services and take the first 4
+        setServices(servicesData.filter(s => !s.isHidden).slice(0, 4));
       } catch (error) {
         console.error("Data fetch error", error);
       } finally {
@@ -230,9 +231,17 @@ export default function Home() {
               <h3 className="font-headline text-4xl md:text-6xl font-bold tracking-tight uppercase">The Lookbook</h3>
               <p className="text-on-surface-variant font-body mt-4 max-w-md">Precision meets contemporary style. A curated selection of our signature grooming work.</p>
             </div>
-            <div className="flex gap-4">
-               <div className="h-px w-20 bg-primary/30 mt-auto mb-4 hidden md:block"></div>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+               <div className="h-px w-20 bg-primary/30 hidden md:block"></div>
                <span className="font-headline text-xs tracking-[0.3em] uppercase text-primary font-bold">Curated Styles · 2024</span>
+               <a 
+                 href="https://www.instagram.com/aceoffadesbarberstudionj/?hl=en" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="flex items-center gap-2 px-6 py-2 border border-primary/20 text-primary hover:bg-primary hover:text-on-primary transition-all duration-500 font-headline text-[10px] uppercase tracking-widest font-black"
+               >
+                 Explore Full Gallery
+               </a>
             </div>
           </div>
 

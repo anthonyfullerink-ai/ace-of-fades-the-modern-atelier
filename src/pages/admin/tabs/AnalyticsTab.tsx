@@ -11,7 +11,9 @@ import {
   Activity,
   UserCheck,
   UserMinus,
-  Briefcase
+  Briefcase,
+  Star,
+  MessageSquareQuote
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -27,15 +29,16 @@ import {
   PieChart, 
   Pie 
 } from 'recharts';
-import { Booking, Client, Service, getTrafficStats, DailyStats } from '../../../services/api';
+import { Booking, Client, Service, getTrafficStats, DailyStats, Review } from '../../../services/api';
 
 interface AnalyticsTabProps {
   bookings: Booking[];
   clients: Client[];
   services: Service[];
+  reviews: Review[];
 }
 
-const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ bookings, clients, services }) => {
+const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ bookings, clients, services, reviews }) => {
   // --- Data Calculations ---
 
   const [rawTrafficData, setRawTrafficData] = useState<DailyStats[]>([]);
@@ -61,18 +64,19 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ bookings, clients, services
     }, 0);
 
     const totalVisits = rawTrafficData.reduce((acc, d) => acc + d.visits, 0);
-    const conversionRate = totalVisits > 0 
-      ? ((bookings.length / totalVisits) * 100).toFixed(1) 
-      : '0';
+    const averageRating = reviews.length > 0 
+      ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) 
+      : '5.0';
 
     return {
       revenue: totalRevenue,
       total: bookings.length,
       completed: completedBookings.length,
       cancelled: cancelledBookings.length,
-      conversion: conversionRate
+      rating: averageRating,
+      reviewCount: reviews.length
     };
-  }, [bookings, services, rawTrafficData]);
+  }, [bookings, services, rawTrafficData, reviews]);
 
   // 2. Traffic Area Chart Data (Real data)
   const trafficData = useMemo(() => {
@@ -365,6 +369,61 @@ const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ bookings, clients, services
           <p className="mt-8 text-[10px] text-on-surface-variant italic text-center font-medium">Insights are based on current database appointments and historical ritual demand.</p>
         </div>
       </div>
+
+      {/* Recent Guest Feedback */}
+      <motion.div 
+        variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
+        className="bg-surface-container border border-outline-variant/10 p-8"
+      >
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary mb-2">RAW GUEST INPUT</p>
+            <h2 className="text-3xl font-headline font-bold uppercase tracking-tight">Recent Feedback</h2>
+          </div>
+          <div className="p-4 bg-surface-container-highest border border-outline-variant/5">
+            <MessageSquareQuote className="text-primary" size={24} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {reviews.slice(0, 6).map((review, i) => (
+            <motion.div 
+              key={review.id || i}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-surface-container-lowest border border-outline-variant/10 p-6 relative overflow-hidden"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h4 className="font-headline font-bold text-sm tracking-widest uppercase">{review.clientName}</h4>
+                  <p className="text-[10px] text-on-surface-variant uppercase font-bold mt-1">{review.date}</p>
+                </div>
+                <div className="flex gap-0.5">
+                  {[...Array(5)].map((_, starIdx) => (
+                    <Star 
+                      key={starIdx} 
+                      size={10} 
+                      className={starIdx < review.rating ? 'fill-primary text-primary' : 'text-outline-variant opacity-20'} 
+                    />
+                  ))}
+                </div>
+              </div>
+              <p className="font-body text-sm text-on-surface-variant italic leading-relaxed">
+                "{review.comment || 'The client declined to leave a written comment, but rated the experience highly.'}"
+              </p>
+              <div className="absolute -bottom-4 -right-4 text-primary opacity-[0.03]">
+                <MessageSquareQuote size={80} />
+              </div>
+            </motion.div>
+          ))}
+          {reviews.length === 0 && (
+              <div className="col-span-full py-20 text-center border border-dashed border-outline-variant/30 opacity-40">
+                  <p className="font-headline uppercase tracking-[0.2em] text-xs font-bold">No verified guest feedback recorded yet</p>
+              </div>
+          )}
+        </div>
+      </motion.div>
     </motion.div>
   );
 };

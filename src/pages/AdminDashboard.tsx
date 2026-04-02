@@ -30,7 +30,11 @@ import {
   removeBlockedSlot,
   BlockedSlot,
   generateTimeSlots, 
-  getShopHoursForDate
+  getShopHoursForDate,
+  getAllReviews,
+  Review,
+  getInquiries,
+  Inquiry
 } from '../services/api';
 
 // Components
@@ -44,6 +48,7 @@ import ServicesTab from './admin/tabs/ServicesTab';
 import SettingsTab from './admin/tabs/SettingsTab';
 import KnowledgeTab from './admin/tabs/KnowledgeTab';
 import AuditLogTab from './admin/tabs/AuditLogTab';
+import InquiriesTab from './admin/tabs/InquiriesTab';
 import { auth } from '../config/firebase';
 
 // Data
@@ -75,6 +80,9 @@ export default function AdminDashboard() {
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
   const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [slots, setSlots] = useState<BlockedSlot[]>([]);
   
   // Tab-specific State
   const [bookingFilter, setBookingFilter] = useState<'Upcoming' | 'Completed' | 'Cancelled' | 'No-Show' | 'All'>('All');
@@ -128,18 +136,24 @@ export default function AdminDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [b, c, s, r, sv] = await Promise.all([
+      const [bookingsData, clientsData, settingsData, rangesData, slotsData, servicesData, reviewsData, inquiriesData] = await Promise.all([
         getAllBookings(),
         getAllClients(),
         getBusinessSettings(),
         getBlockedRanges(),
-        getServices()
+        getBlockedSlots(),
+        getServices(),
+        getAllReviews(),
+        getInquiries()
       ]);
-      setBookings(b);
-      setClients(c);
-      setBusinessSettings(s);
-      setBlockedRanges(r);
-      setServices(sv);
+      setBookings(bookingsData);
+      setClients(clientsData);
+      setBusinessSettings(settingsData);
+      setBlockedRanges(rangesData);
+      setSlots(slotsData);
+      setServices(servicesData);
+      setReviews(reviewsData);
+      setInquiries(inquiriesData);
 
       // Auto-sync Vagaro data in background if configured
       if (isVagaroConfigured()) {
@@ -234,6 +248,17 @@ export default function AdminDashboard() {
       fetchData();
     } catch (error) {
       toast.error("Operation failed");
+    }
+  };
+
+  const handleUpdateClient = async (uid: string, data: Partial<Client>) => {
+    try {
+      await updateClient(uid, data);
+      await fetchData();
+      return true;
+    } catch (error) {
+      toast.error("Failed to update client");
+      throw error;
     }
   };
 
@@ -419,6 +444,7 @@ export default function AdminDashboard() {
             bookings={bookings}
             clients={clients}
             services={services}
+            reviews={reviews}
           />
         )}
 
@@ -446,6 +472,10 @@ export default function AdminDashboard() {
             onStatusUpdate={handleUpdateStatus}
             onDeleteBooking={handleDeleteBooking}
           />
+        )}
+
+        {activeView === 'inquiries' && (
+          <InquiriesTab key="inquiries" inquiries={inquiries} loading={loading} />
         )}
 
         {activeView === 'calendar' && (
@@ -493,6 +523,7 @@ export default function AdminDashboard() {
             setClientSortOrder={setClientSortOrder}
             onSuspendClient={handleSuspendClient}
             onDeleteClient={handleDeleteClient}
+            onUpdateClient={handleUpdateClient}
           />
         )}
 

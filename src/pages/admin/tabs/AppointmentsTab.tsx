@@ -276,7 +276,15 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
                     </td>
                     <td className="p-6">
                       <div className="font-headline font-bold uppercase">{booking.customerName || 'Guest Client'}</div>
-                      <div className="font-body text-xs text-on-surface-variant">{booking.customerEmail || 'No email provided'}</div>
+                      <div className="font-body text-xs text-on-surface-variant mb-2">{booking.customerEmail || 'No email provided'}</div>
+                      {booking.specialInstructions && (
+                        <div className="bg-primary/5 border-l-2 border-primary p-2 mt-1 max-w-[200px]">
+                          <p className="text-[9px] uppercase tracking-widest text-primary font-bold mb-0.5">Special Instructions</p>
+                          <p className="text-[10px] text-on-surface leading-tight italic line-clamp-2" title={booking.specialInstructions}>
+                            "{booking.specialInstructions}"
+                          </p>
+                        </div>
+                      )}
                     </td>
                     <td className="p-6">
                       <div className="font-headline text-sm uppercase">{getServiceLabel(booking.serviceId)}</div>
