@@ -21,13 +21,13 @@ interface ClientsTabProps {
   bookings: Booking[];
   services: Service[];
   clientSearch: string;
-  setSearchTerm: (val: string) => void;
-  statusFilter: 'All' | 'Active' | 'Suspended';
-  setStatusFilter: (val: 'All' | 'Active' | 'Suspended') => void;
-  typeFilter: 'All' | 'Registered' | 'Guest';
-  setTypeFilter: (val: 'All' | 'Registered' | 'Guest') => void;
-  sortOrder: 'newest' | 'oldest' | 'az' | 'za';
-  setSortOrder: (val: 'newest' | 'oldest' | 'az' | 'za') => void;
+  setClientSearch: (val: string) => void;
+  clientStatusFilter: 'All' | 'Active' | 'Suspended';
+  setClientStatusFilter: (val: 'All' | 'Active' | 'Suspended') => void;
+  clientTypeFilter: 'All' | 'Registered' | 'Guest';
+  setClientTypeFilter: (val: 'All' | 'Registered' | 'Guest') => void;
+  clientSortOrder: 'newest' | 'oldest' | 'az' | 'za';
+  setClientSortOrder: (val: 'newest' | 'oldest' | 'az' | 'za') => void;
   onSuspendClient: (client: Client, currentlySuspended: boolean) => void;
   onDeleteClient: (uid: string) => void;
 }
@@ -37,13 +37,13 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
   bookings,
   services,
   clientSearch,
-  setSearchTerm,
-  statusFilter,
-  setStatusFilter,
-  typeFilter,
-  setTypeFilter,
-  sortOrder,
-  setSortOrder,
+  setClientSearch,
+  clientStatusFilter,
+  setClientStatusFilter,
+  clientTypeFilter,
+  setClientTypeFilter,
+  clientSortOrder,
+  setClientSortOrder,
   onSuspendClient,
   onDeleteClient
 }) => {
@@ -61,20 +61,20 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
         phone.includes(clientSearch);
       
       const matchesStatus = 
-        statusFilter === 'All' ||
-        (statusFilter === 'Suspended' && c.suspended) ||
-        (statusFilter === 'Active' && !c.suspended);
+        clientStatusFilter === 'All' ||
+        (clientStatusFilter === 'Suspended' && c.suspended) ||
+        (clientStatusFilter === 'Active' && !c.suspended);
 
       const matchesType =
-        typeFilter === 'All' ||
-        (typeFilter === 'Guest' && c.isGuest) ||
-        (typeFilter === 'Registered' && !c.isGuest);
+        clientTypeFilter === 'All' ||
+        (clientTypeFilter === 'Guest' && c.isGuest) ||
+        (clientTypeFilter === 'Registered' && !c.isGuest);
 
       return matchesSearch && matchesStatus && matchesType;
     });
 
     filtered.sort((a, b) => {
-      switch (sortOrder) {
+      switch (clientSortOrder) {
         case 'newest': return (b.createdAt || 0) - (a.createdAt || 0);
         case 'oldest': return (a.createdAt || 0) - (b.createdAt || 0);
         case 'az': return (a.displayName || '').localeCompare(b.displayName || '');
@@ -84,7 +84,7 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
     });
 
     return filtered;
-  }, [clients, clientSearch, statusFilter, typeFilter, sortOrder]);
+  }, [clients, clientSearch, clientStatusFilter, clientTypeFilter, clientSortOrder]);
 
   const getClientRituals = (client: Client) => {
     return bookings.filter(b => 
@@ -111,13 +111,13 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
     }
   };
 
-  const hasActiveFilters = clientSearch || statusFilter !== 'All' || typeFilter !== 'All' || sortOrder !== 'newest';
+  const hasActiveFilters = clientSearch || clientStatusFilter !== 'All' || clientTypeFilter !== 'All' || clientSortOrder !== 'newest';
 
   const clearAllFilters = () => {
-    setSearchTerm('');
-    setStatusFilter('All');
-    setTypeFilter('All');
-    setSortOrder('newest');
+    setClientSearch('');
+    setClientStatusFilter('All');
+    setClientTypeFilter('All');
+    setClientSortOrder('newest');
   };
 
   return (
@@ -134,15 +134,15 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
               type="text"
               placeholder="Search clients by name, email, or phone..."
               value={clientSearch}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setClientSearch(e.target.value)}
               className="w-full bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 pl-12 focus:border-primary focus:outline-none transition-colors"
             />
           </div>
           <div className="relative">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50" size={18} />
             <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              value={clientStatusFilter}
+              onChange={(e) => setClientStatusFilter(e.target.value as any)}
               className="w-full appearance-none bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 pl-12 focus:border-primary focus:outline-none transition-colors"
             >
               <option value="All">All Statuses</option>
@@ -154,8 +154,8 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
           <div className="relative">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50" size={18} />
             <select 
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as any)}
+              value={clientTypeFilter}
+              onChange={(e) => setClientTypeFilter(e.target.value as any)}
               className="w-full appearance-none bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 pl-12 focus:border-primary focus:outline-none transition-colors"
             >
               <option value="All">All Types</option>
@@ -169,8 +169,8 @@ const ClientsTab: React.FC<ClientsTabProps> = ({
           <div className="relative min-w-[200px]">
             <ArrowUpDown className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50" size={18} />
             <select 
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as any)}
+              value={clientSortOrder}
+              onChange={(e) => setClientSortOrder(e.target.value as any)}
               className="w-full appearance-none bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 pl-12 focus:border-primary focus:outline-none transition-colors"
             >
               <option value="newest">Newest First</option>

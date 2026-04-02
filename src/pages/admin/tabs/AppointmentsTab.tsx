@@ -10,7 +10,8 @@ import {
   X, 
   ChevronDown, 
   AlertCircle, 
-  Trash2 
+  Trash2, 
+  Clock 
 } from 'lucide-react';
 import { Booking, Service } from '../../../services/api';
 import { Barber } from '../../../data/barbers';
@@ -22,6 +23,8 @@ interface AppointmentsTabProps {
   setSearchTerm: (val: string) => void;
   statusFilter: string;
   setStatusFilter: (val: string) => void;
+  timelineFilter: string;
+  setTimelineFilter: (val: string) => void;
   dateFilter: string;
   setDateFilter: (val: string) => void;
   serviceFilter: string;
@@ -43,6 +46,8 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
   setSearchTerm,
   statusFilter,
   setStatusFilter,
+  timelineFilter,
+  setTimelineFilter,
   dateFilter,
   setDateFilter,
   serviceFilter,
@@ -56,6 +61,8 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
   onStatusUpdate,
   onDeleteBooking
 }) => {
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   const filteredBookings = useMemo(() => {
     const filtered = bookings.filter(b => {
       const matchesSearch = 
@@ -68,25 +75,37 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
       const matchesService = serviceFilter === 'All' || b.serviceId === serviceFilter;
       const matchesBarber = barberFilter === 'All' || b.barber === barberFilter;
 
-      return matchesSearch && matchesStatus && matchesDate && matchesService && matchesBarber;
+      let matchesTimeline = true;
+      if (timelineFilter === 'Past') {
+        matchesTimeline = b.date < todayStr;
+      } else if (timelineFilter === 'Today') {
+        matchesTimeline = b.date === todayStr;
+      } else if (timelineFilter === 'Future') {
+        matchesTimeline = b.date > todayStr;
+      }
+
+      return matchesSearch && matchesStatus && matchesDate && matchesService && matchesBarber && matchesTimeline;
     });
 
     filtered.sort((a, b) => {
+      const dateTimeA = new Date(`${a.date}T${a.time || '00:00'}`).getTime();
+      const dateTimeB = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
       if (sortOrder === 'newest') {
-        return (b.createdAt || 0) - (a.createdAt || 0);
+        return dateTimeB - dateTimeA;
       } else {
-        return (a.createdAt || 0) - (b.createdAt || 0);
+        return dateTimeA - dateTimeB;
       }
     });
 
     return filtered;
-  }, [bookings, searchTerm, statusFilter, dateFilter, serviceFilter, barberFilter, sortOrder]);
+  }, [bookings, searchTerm, statusFilter, timelineFilter, dateFilter, serviceFilter, barberFilter, sortOrder, todayStr]);
 
-  const hasActiveFilters = searchTerm || statusFilter !== 'All' || dateFilter || serviceFilter !== 'All' || barberFilter !== 'All' || sortOrder !== 'newest';
+  const hasActiveFilters = searchTerm || statusFilter !== 'All' || timelineFilter !== 'All' || dateFilter || serviceFilter !== 'All' || barberFilter !== 'All' || sortOrder !== 'newest';
 
   const clearAllFilters = () => {
     setSearchTerm('');
     setStatusFilter('All');
+    setTimelineFilter('All');
     setDateFilter('');
     setServiceFilter('All');
     setBarberFilter('All');
@@ -114,7 +133,7 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
       exit={{ opacity: 0 }}
     >
       <div className="bg-surface-container p-6 border border-outline-variant/10 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           <div className="md:col-span-2 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50" size={18} />
             <input 
@@ -137,6 +156,20 @@ const AppointmentsTab: React.FC<AppointmentsTabProps> = ({
               <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
               <option value="No-Show">No-Show</option>
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50 pointer-events-none" size={16} />
+          </div>
+          <div className="relative">
+            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50" size={18} />
+            <select 
+              value={timelineFilter}
+              onChange={(e) => setTimelineFilter(e.target.value)}
+              className="w-full appearance-none bg-surface-container-lowest border border-outline-variant/30 text-on-surface p-4 pl-12 focus:border-primary focus:outline-none transition-colors"
+            >
+              <option value="All">All Timeline</option>
+              <option value="Past">Past Appointments</option>
+              <option value="Today">Today</option>
+              <option value="Future">Future Appointments</option>
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50 pointer-events-none" size={16} />
           </div>

@@ -74,7 +74,8 @@ export default function AdminDashboard() {
   const [services, setServices] = useState<Service[]>([]);
   
   // Tab-specific State
-  const [bookingFilter, setBookingFilter] = useState<'Upcoming' | 'Completed' | 'Cancelled' | 'No-Show' | 'All'>('Upcoming');
+  const [bookingFilter, setBookingFilter] = useState<'Upcoming' | 'Completed' | 'Cancelled' | 'No-Show' | 'All'>('All');
+  const [bookingTimelineFilter, setBookingTimelineFilter] = useState('All');
   const [bookingSearch, setBookingSearch] = useState('');
   const [bookingDateFilter, setBookingDateFilter] = useState('');
   const [bookingServiceFilter, setBookingServiceFilter] = useState('All');
@@ -418,6 +419,8 @@ export default function AdminDashboard() {
             setSearchTerm={setBookingSearch}
             statusFilter={bookingFilter}
             setStatusFilter={setBookingFilter}
+            timelineFilter={bookingTimelineFilter}
+            setTimelineFilter={setBookingTimelineFilter}
             dateFilter={bookingDateFilter}
             setDateFilter={setBookingDateFilter}
             serviceFilter={bookingServiceFilter}
