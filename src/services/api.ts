@@ -47,6 +47,7 @@ const blockedSlotsCollection = collection(db, 'blocked_slots');
 const blockedRangesCollection = collection(db, 'blocked_ranges');
 const usersCollection = collection(db, 'users');
 const settingsCollection = collection(db, 'settings');
+const servicesCollection = collection(db, 'services');
 
 export interface DayHours {
   open: string;
@@ -248,16 +249,15 @@ export const updateBookingStatus = async (bookingId: string, status: Booking['st
         const userId = booking.userId;
         // Don't process manual/guest entries
         if (userId && !userId.startsWith('manual-') && !userId.startsWith('guest-')) {
-          // Count total no-shows for this user
-          const noShowQuery = query(bookingsCollection, where('userId', '==', userId), where('status', '==', 'No-Show'));
-          const noShowSnap = await getDocs(noShowQuery);
-          const noShowCount = noShowSnap.size;
-
           const userRef = doc(db, 'users', userId);
-          await setDoc(userRef, { noShowCount }, { merge: true });
-
-          if (noShowCount >= 2) {
-            await setDoc(userRef, { suspended: true }, { merge: true });
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const newCount = (userData.noShowCount || 0) + 1;
+            await updateDoc(userRef, { 
+              noShowCount: newCount,
+              suspended: newCount >= 2
+            });
           }
         }
       }
@@ -267,6 +267,49 @@ export const updateBookingStatus = async (bookingId: string, status: Booking['st
   } catch (error) {
     console.error("Error updating booking status:", error);
     throw error;
+  }
+};
+
+/**
+ * Synchronizes booking statuses by marking past "Upcoming" appointments as "Completed".
+ */
+export const syncBookingStatuses = async () => {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Query for all upcoming bookings
+    const q = query(bookingsCollection, where("status", "==", "Upcoming"));
+    const snapshot = await withTimeout(getDocs(q));
+
+    const updates = snapshot.docs.map(async (docSnapshot) => {
+      const booking = docSnapshot.data() as Booking;
+      const bDate = booking.date;
+      const bMinutes = timeToMinutes(booking.time);
+      const bDuration = booking.serviceDuration || 30;
+
+      // Condition for completion:
+      // 1. Date is strictly in the past
+      // 2. Date is today, but the appointment end time (start + duration) has passed
+      if (bDate < todayStr || (bDate === todayStr && (bMinutes + bDuration) < currentMinutes)) {
+        await updateDoc(docSnapshot.ref, { status: 'Completed' });
+        return docSnapshot.id;
+      }
+      return null;
+    });
+
+    const results = await Promise.all(updates);
+    const updatedCount = results.filter(r => r !== null).length;
+    
+    if (updatedCount > 0) {
+      console.log(`Successfully auto-completed ${updatedCount} past appointments.`);
+    }
+    
+    return updatedCount;
+  } catch (error) {
+    console.error("Failed to sync booking statuses:", error);
+    return 0;
   }
 };
 
@@ -475,6 +518,77 @@ export const initClientDoc = async (user: any) => {
     return true;
   } catch (error) {
     console.error("Error initializing client doc:", error);
+  }
+};
+
+// --- Service Management ---
+
+export interface Service {
+  id: string;
+  name: string;
+  desc: string;
+  price: string;
+  duration: number; // in minutes
+}
+
+export const getServices = async (): Promise<Service[]> => {
+  try {
+    const q = query(servicesCollection, orderBy("name", "asc"));
+    // Add a reasonable timeout to prevent infinite hang if network is slow/broken
+    const querySnapshot = await withTimeout(getDocs(q), 10000);
+    
+    if (querySnapshot.empty) {
+      console.warn("No services found in Firestore, using static data.");
+      const { SERVICES } = await import('../data/services');
+      return SERVICES;
+    }
+
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Service));
+  } catch (error) {
+    console.error("Critical error fetching services:", error);
+    // Absolute fallback so the app stays functional
+    try {
+      const { SERVICES } = await import('../data/services');
+      return SERVICES;
+    } catch (e) {
+      console.error("Double failure in getServices:", e);
+      return [];
+    }
+  }
+};
+
+export const addService = async (service: Omit<Service, 'id'>) => {
+  try {
+    const docRef = await addDoc(servicesCollection, service);
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding service:", error);
+    throw error;
+  }
+};
+
+export const updateService = async (serviceId: string, data: Partial<Service>) => {
+  try {
+    const serviceRef = doc(db, 'services', serviceId);
+    await updateDoc(serviceRef, data);
+    return true;
+  } catch (error) {
+    console.error("Error updating service:", error);
+    throw error;
+  }
+};
+
+export const deleteService = async (serviceId: string) => {
+  try {
+    const serviceRef = doc(db, 'services', serviceId);
+    await deleteDoc(serviceRef);
+    return true;
+  } catch (error) {
+    console.error("Error deleting service:", error);
+    throw error;
   }
 };
 

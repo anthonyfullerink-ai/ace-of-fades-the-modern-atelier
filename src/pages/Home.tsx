@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
-import { Calendar, Scissors, MapPin, Verified, Star, Phone } from 'lucide-react';
+import { Calendar, Scissors, MapPin, Verified, Star, Phone, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getBusinessSettings, BusinessSettings, isShopOpen, getBlockedRanges, DayHours, getServices, Service } from '../services/api';
 
 const reviews = [
   {
@@ -36,22 +38,30 @@ function StarRating({ count }: { count: number }) {
   );
 }
 
-import { useEffect, useState } from 'react';
-import { getBusinessSettings, BusinessSettings, isShopOpen, getBlockedRanges, DayHours } from '../services/api';
-import { SERVICES } from '../data/services';
-
 export default function Home() {
-  const featuredServices = SERVICES.slice(0, 4);
+  const [services, setServices] = useState<Service[]>([]);
   const [settings, setSettings] = useState<BusinessSettings | null>(null);
   const [shopStatus, setShopStatus] = useState<{ isOpen: boolean; message: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getBusinessSettings(), getBlockedRanges()])
-      .then(([settingsData, rangesData]) => {
+    const fetchData = async () => {
+      try {
+        const [settingsData, rangesData, servicesData] = await Promise.all([
+          getBusinessSettings(),
+          getBlockedRanges(),
+          getServices()
+        ]);
         setSettings(settingsData);
         setShopStatus(isShopOpen(settingsData, rangesData));
-      })
-      .catch(console.error);
+        setServices(servicesData.slice(0, 4));
+      } catch (error) {
+        console.error("Data fetch error", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   return (
@@ -103,7 +113,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Link to="/book?serviceId=01" className="gold-gradient inline-block px-12 py-5 text-on-primary font-headline font-bold tracking-widest uppercase active:scale-[0.98] transition-transform">
+            <Link to={services.length > 0 ? `/book?serviceId=${services[0].id}` : '/services'} className="gold-gradient inline-block px-12 py-5 text-on-primary font-headline font-bold tracking-widest uppercase active:scale-[0.98] transition-transform">
               Book Appointment
             </Link>
           </motion.div>
@@ -122,18 +132,25 @@ export default function Home() {
               View Full Menu
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-6">
-            {featuredServices.map((service) => (
-              <div key={service.id} className="group relative bg-surface-container p-8 flex justify-between items-center transition-colors hover:bg-surface-container-high border-l-2 border-transparent hover:border-primary">
-                <span className="absolute -left-2 text-7xl font-headline font-black text-outline-variant/10 pointer-events-none group-hover:opacity-20 transition-opacity">{service.id}</span>
-                <div className="relative z-10">
-                  <h4 className="font-headline text-xl font-bold tracking-tight uppercase text-on-surface">{service.name}</h4>
-                  <p className="text-on-surface-variant text-sm mt-1">{service.desc}</p>
+          
+          {loading ? (
+            <div className="py-20 flex justify-center">
+              <Loader2 className="animate-spin text-primary" size={32} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {services.map((service, index) => (
+                <div key={service.id} className="group relative bg-surface-container p-8 flex justify-between items-center transition-colors hover:bg-surface-container-high border-l-2 border-transparent hover:border-primary">
+                  <span className="absolute -left-2 text-7xl font-headline font-black text-outline-variant/10 pointer-events-none group-hover:opacity-20 transition-opacity">{(index + 1).toString().padStart(2, '0')}</span>
+                  <div className="relative z-10">
+                    <h4 className="font-headline text-xl font-bold tracking-tight uppercase text-on-surface">{service.name}</h4>
+                    <p className="text-on-surface-variant text-sm mt-1">{service.desc}</p>
+                  </div>
+                  <span className="font-headline text-primary font-bold text-2xl">{service.price}</span>
                 </div>
-                <span className="font-headline text-primary font-bold text-2xl">{service.price}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

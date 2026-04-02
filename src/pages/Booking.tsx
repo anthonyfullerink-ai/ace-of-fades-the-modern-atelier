@@ -2,11 +2,25 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, AlertTriangle, CheckCircle, Loader2, User } from 'lucide-react';
-import { SERVICES } from '../data/services';
 import { BARBERS, Barber } from '../data/barbers';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../config/firebase';
-import { getBlockedSlots, getBookingsByDate, createBooking, getBlockedRanges, BlockedRange, getClientByUid, getBusinessSettings, BusinessSettings, getShopHoursForDate, generateTimeSlots, isSlotAvailableForService, timeToMinutes } from '../services/api';
+import { 
+  getBlockedSlots, 
+  getBookingsByDate, 
+  createBooking, 
+  getBlockedRanges, 
+  BlockedRange, 
+  getClientByUid, 
+  getBusinessSettings, 
+  BusinessSettings, 
+  getShopHoursForDate, 
+  generateTimeSlots, 
+  isSlotAvailableForService, 
+  timeToMinutes,
+  getServices,
+  Service
+} from '../services/api';
 import { sendBookingConfirmation } from '../services/email';
 import toast from 'react-hot-toast';
 
@@ -21,16 +35,33 @@ export default function Booking() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
 
   const selectedService = useMemo(() => 
-    SERVICES.find(s => s.id === serviceId) || SERVICES[0], 
-  [serviceId]);
+    services.find(s => s.id === serviceId) || services[0], 
+  [serviceId, services]);
 
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [blockedRanges, setBlockedRanges] = useState<BlockedRange[]>([]);
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null);
   const [isSuspended, setIsSuspended] = useState(false);
+
+  // Fetch Services
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const svs = await getServices();
+        setServices(svs);
+      } catch (error) {
+        toast.error("Failed to load services");
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+    fetchServices();
+  }, []);
 
   // Check if user is suspended
   useEffect(() => {
@@ -67,7 +98,7 @@ export default function Booking() {
   }, []);
 
   useEffect(() => {
-    if (!selectedDate || !businessSettings) return;
+    if (!selectedDate || !businessSettings || !selectedService) return;
 
     const fetchAvailability = async () => {
         setLoadingTimes(true);
@@ -123,7 +154,7 @@ export default function Booking() {
     };
 
     fetchAvailability();
-  }, [selectedDate, blockedRanges, businessSettings]);
+  }, [selectedDate, blockedRanges, businessSettings, selectedService]);
 
   // Available dates (next 45 days)
   const availableDates = useMemo(() => {
@@ -163,7 +194,7 @@ export default function Booking() {
   };
 
   const handleConfirm = async () => {
-    if (!user || !selectedDate || !selectedTime || !selectedBarber) {
+    if (!user || !selectedDate || !selectedTime || !selectedBarber || !selectedService) {
         toast.error("Missing booking information or not logged in.");
         return;
     }
@@ -194,7 +225,6 @@ export default function Booking() {
             });
         } catch (emailError) {
             console.warn("Booking saved, but confirmation email failed to send.", emailError);
-            // We don't block the UI for email failures, but we log it
         }
 
         toast.success("Booking confirmed!");
@@ -208,13 +238,20 @@ export default function Booking() {
     }
   };
 
+  if (loadingServices) return (
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center gap-6">
+      <div className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="font-headline uppercase tracking-[0.4em] text-xs text-primary animate-pulse">Initializing Portal</div>
+    </div>
+  );
+
   return (
     <main className="pt-32 pb-24 px-6 max-w-4xl mx-auto min-h-screen">
       {isSuspended ? (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-20"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20"
         >
           <div className="inline-flex items-center justify-center w-24 h-24 bg-red-500/10 border-2 border-red-500/30 rounded-full mb-8">
             <AlertTriangle className="text-red-500" size={48} />
@@ -224,6 +261,12 @@ export default function Booking() {
             Your account has been suspended due to repeated no-shows. Please contact us directly to resolve this.
           </p>
         </motion.div>
+      ) : !selectedService ? (
+        <div className="text-center py-20">
+          <h2 className="font-headline text-3xl font-bold uppercase tracking-widest text-on-surface mb-4">Service Not Found</h2>
+          <p className="text-on-surface-variant mb-8">The service you requested is currently unavailable.</p>
+          <button onClick={() => navigate('/services')} className="gold-gradient px-10 py-4 uppercase font-bold tracking-widest">View Services</button>
+        </div>
       ) : (
       <AnimatePresence mode="wait">
         {/* Step 1: Select Barber */}
@@ -457,7 +500,7 @@ export default function Booking() {
               Booking Confirmed
             </h1>
             <p className="text-on-surface-variant text-lg mb-12 max-w-md mx-auto">
-              Your appointment with <span className="text-primary font-bold">{selectedBarber?.name}</span> for {selectedService.name} is set for {selectedTime} on {new Date(selectedDate! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.
+              Your appointment with <span className="text-primary font-bold">{selectedBarber?.name}</span> for {selectedService?.name} is set for {selectedTime} on {new Date(selectedDate! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.
             </p>
             <button 
               onClick={() => navigate('/dashboard')}

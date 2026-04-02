@@ -13,6 +13,7 @@ import Booking from './pages/Booking';
 import Auth from './pages/Auth';
 import AdminDashboard from './pages/AdminDashboard';
 import ScrollToTop from './components/ScrollToTop';
+import { migrateServicesToFirestore } from './services/migration';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -53,6 +54,11 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Run initial migration
+    migrateServicesToFirestore();
+  }, []);
+
   return (
     <Router>
       <ScrollToTop />

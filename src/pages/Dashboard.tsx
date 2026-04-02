@@ -1,16 +1,28 @@
 import { motion } from 'motion/react';
-import { Calendar, Scissors, ChevronRight, Loader2, User, X, AlertCircle } from 'lucide-react';
+import { Calendar, Scissors, ChevronRight, Loader2, User } from 'lucide-react';
 import { useState, useEffect, FormEvent } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../config/firebase';
-import { getUserBookings, cancelBooking, rescheduleBooking, Booking, updateClient, getClientByUid, Client } from '../services/api';
-import { SERVICES } from '../data/services';
+import { 
+  getUserBookings, 
+  cancelBooking, 
+  rescheduleBooking, 
+  Booking, 
+  updateClient, 
+  getClientByUid, 
+  Client,
+  getServices,
+  Service
+} from '../services/api';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [user] = useAuthState(auth);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Profile state
@@ -60,15 +72,19 @@ export default function Dashboard() {
     }
   };
 
-  const fetchBookings = async () => {
+  const fetchData = async () => {
     if (!user) return;
     try {
-      const data = await getUserBookings(user.uid);
-      setBookings(data);
+      const [bookingsData, servicesData] = await Promise.all([
+        getUserBookings(user.uid),
+        getServices()
+      ]);
+      setBookings(bookingsData);
+      setServices(servicesData);
     } catch (error) {
       console.error(error);
       const isTimeout = error instanceof Error && error.message.includes("timed out");
-      toast.error(isTimeout ? "Database is taking too long." : "Failed to load appointments");
+      toast.error(isTimeout ? "Database is taking too long." : "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -76,7 +92,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      fetchBookings();
+      fetchData();
       fetchProfile();
     }
   }, [user]);
@@ -91,7 +107,7 @@ export default function Dashboard() {
         try {
           await cancelBooking(id);
           toast.success("Appointment cancelled");
-          fetchBookings();
+          fetchData();
         } catch (e) {
           toast.error("Failed to cancel appointment");
         } finally {
@@ -112,14 +128,14 @@ export default function Dashboard() {
       setReschedulingId(null);
       setNewDate('');
       setNewTime('');
-      fetchBookings();
+      fetchData();
     } catch (e) {
       toast.error("Failed to reschedule");
     }
   };
 
   const getServiceName = (serviceId: string) => {
-    return SERVICES.find(s => s.id === serviceId)?.name || 'Custom Service';
+    return services.find(s => s.id === serviceId)?.name || 'Custom Service';
   };
 
   const upcoming = bookings.filter(b => b.status === 'Upcoming');
@@ -356,7 +372,10 @@ export default function Dashboard() {
                   <p className="font-body text-sm text-on-surface-variant">{item.date}</p>
                 </div>
                 {item.status !== 'Cancelled' && (
-                  <button className="text-primary font-headline text-[10px] tracking-widest uppercase border-b border-primary/40 hover:border-primary pb-1 transition-all flex items-center gap-2">
+                  <button 
+                    onClick={() => navigate(`/book?serviceId=${item.serviceId}`)}
+                    className="text-primary font-headline text-[10px] tracking-widest uppercase border-b border-primary/40 hover:border-primary pb-1 transition-all flex items-center gap-2"
+                  >
                     BOOK AGAIN <ChevronRight size={12} />
                   </button>
                 )}
