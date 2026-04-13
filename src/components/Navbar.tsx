@@ -70,7 +70,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center gap-12">
           <Link to="/" className="flex items-center group">
-            <img src="/logo.png" alt="Ace of Fades Logo" className="h-10 object-contain transition-transform duration-500 group-hover:scale-110" />
+            <img src="/logo.png" alt="Ace of Fades Logo" className="h-10 object-contain transition-transform duration-500 group-hover:scale-110 mix-blend-screen" />
           </Link>
           <nav className="hidden md:flex gap-10">
             {navLinks.map((link) => (

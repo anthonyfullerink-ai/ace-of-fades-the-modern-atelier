@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getServices, Service } from '../services/api';
 import toast from 'react-hot-toast';
@@ -10,6 +10,10 @@ export default function Services() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInquiry, setShowInquiry] = useState(false);
+
+  // Parallax hooks
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 800], [0, 200]);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -39,14 +43,20 @@ export default function Services() {
   return (
     <main className="pt-32 pb-24 px-6 max-w-6xl mx-auto min-h-screen">
       <section className="mb-24 relative">
-  <div className="absolute inset-0 z-0">
-    <img
-      className="w-full h-full object-cover opacity-70"
-      src="https://images.unsplash.com/photo-1554511915-c120c7b0b5ff?w=1920&q=90&auto=format"
-      alt="Luxury Barbershop Interior"
-      referrerPolicy="no-referrer"
-    />
-    <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+  <div className="absolute inset-0 z-0 overflow-hidden rounded-2xl border border-outline-variant/10 shadow-2xl">
+    <motion.div
+      style={{ y }}
+      animate={{ scale: [1, 1.05, 1] }}
+      transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+      className="absolute -top-32 -inset-x-10 h-[150%] z-0"
+    >
+      <img
+        className="w-full h-full object-cover opacity-60"
+        src="/services-bg.png"
+        alt="Luxury Barbershop Interior"
+      />
+    </motion.div>
+    <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent z-10 pointer-events-none"></div>
   </div>
         <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
         <motion.div

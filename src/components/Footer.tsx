@@ -17,7 +17,7 @@ export default function Footer() {
       <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-3 gap-20 mb-24">
         {/* Brand Column */}
         <div className="flex flex-col items-center md:items-start gap-8">
-          <img src="/logo.png" alt="Ace of Fades Logo" className="h-14 w-auto object-contain brightness-0 invert opacity-100" />
+          <img src="/logo.png" alt="Ace of Fades Logo" className="h-20 w-auto object-contain opacity-100 mix-blend-screen" />
           <p className="font-body text-sm text-on-surface-variant max-w-xs leading-relaxed text-center md:text-left opacity-80 italic tracking-wide">
             Precision grooming for the modern gentleman. Elevating the art of the fade in an exclusive, high-end Ace Of Fades setting.
           </p>
