@@ -71,9 +71,9 @@ export default function Home() {
       <section id="hero" className="relative h-[80vh] flex items-end px-6 pb-20 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            className="w-full h-full object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700 scale-105"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3i43ZyUBuwx8TljxdRLwVXU049nO1PQGApC6vEoBHXtstS3NL1Stdl9UcfuOy2IKKBuRMcDiTPBQsT2oNTXIkoS3xPnVPAM45WRzw4T64kyYo99UeTcSORGxvAyMTBKVcqrpYDUJcMBhFlxRHn4odgIQiViUeMMwBEzTfLAJET5F4X1b-vLkAIPoZD2Pxxgh2m7Lgzu84EC6y_vy5VfKQxgEnavCBa5_jW9kY7ikjcmur_wc0u72QgMomtO3a5K2mwXj3W0UY5Bs"
-            alt="Ace of Fades Barbershop Interior"
+            className="w-full h-full object-cover opacity-70 scale-105"
+            src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1920&q=90&auto=format"
+            alt="Luxury Barbershop Interior"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
