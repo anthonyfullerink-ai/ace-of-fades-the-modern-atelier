@@ -39,6 +39,15 @@ export default function Services() {
   return (
     <main className="pt-32 pb-24 px-6 max-w-6xl mx-auto min-h-screen">
       <section className="mb-24 relative">
+  <div className="absolute inset-0 z-0">
+    <img
+      className="w-full h-full object-cover opacity-70"
+      src="https://images.unsplash.com/photo-1554511915-c120c7b0b5ff?w=1920&q=90&auto=format"
+      alt="Luxury Barbershop Interior"
+      referrerPolicy="no-referrer"
+    />
+    <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+  </div>
         <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
         <motion.div
            initial={{ opacity: 0, y: 30 }}
